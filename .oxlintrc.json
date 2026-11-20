@@ -119,5 +119,13 @@
     "react/no-unknown-property": "error",
     "react/rules-of-hooks": "off",
     "react/exhaustive-deps": "error"
-  }
+  },
+  "overrides": [
+    {
+      "files": ["electron/**/*.ts", "scripts/**/*.mjs", "electron-builder.config.cjs"],
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ]
 }

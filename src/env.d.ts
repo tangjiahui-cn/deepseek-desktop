@@ -13,3 +13,8 @@ declare module 'prismjs/components/*' {}
 
 /** KaTeX 化学公式扩展通过副作用注册到 KaTeX */
 declare module 'katex/contrib/mhchem' {}
+
+/** preload 暴露的桌面能力；Web 构建中不存在 */
+interface Window {
+  desktop?: import('./services/desktop/api.js').DesktopApi
+}

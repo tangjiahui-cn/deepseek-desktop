@@ -26,7 +26,7 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
-          version: 12.6.0
+          version: 11.26.0
 
       - name: Set up Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -35,7 +35,8 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        # Web 构建不需要 Electron 二进制；跳过安装脚本可少下载 100MB+
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Check types
         run: pnpm type

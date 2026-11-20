@@ -1,0 +1,5 @@
+# pnpm 11 的构建脚本白名单；Electron 的安装脚本必须执行，否则没有二进制
+allowBuilds:
+  electron: true
+  electron-winstaller: true
+  esbuild: true

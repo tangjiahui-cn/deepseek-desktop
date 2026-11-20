@@ -245,3 +245,18 @@
     line-height: 22px;
   }
 }
+
+.updateButton {
+  position: relative;
+}
+
+.updateButton::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--dsw-alias-state-error-primary);
+}

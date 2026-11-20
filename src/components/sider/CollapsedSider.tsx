@@ -1,13 +1,19 @@
-import { IconPanelLeftOutline16, NewChatIcon } from '../base/icons.js'
+import { IconDownloadOutline16, IconPanelLeftOutline16, NewChatIcon } from '../base/icons.js'
 import { useTranslate } from '../../i18n/index.js'
 import { setSiderCollapsed } from '../../services/settings.js'
 import { newChat } from '../../services/chat/store.js'
+import { useDesktopUpdate } from '../../services/desktop/update.js'
 import { IconButton } from '../base/IconButton.js'
 import styles from './Sider.module.css'
 
 /** 收起后左上角的按钮组 */
 export const CollapsedSider = () => {
   const t = useTranslate()
+  const update = useDesktopUpdate((state) => state.state)
+  const hasUpdate =
+    update !== null &&
+    !update.dismissed &&
+    (update.phase === 'available' || update.phase === 'downloaded' || update.phase === 'error')
   return (
     <div className={styles.collapsed}>
       <div className={styles.collapsedGroup}>
@@ -25,6 +31,16 @@ export const CollapsedSider = () => {
           tooltip={t('newChat')}
           onClick={newChat}
         />
+        {hasUpdate ? (
+          <IconButton
+            className={styles.updateButton}
+            size="m"
+            tone="primary"
+            icon={<IconDownloadOutline16 />}
+            tooltip={t('updateShort')}
+            onClick={() => setSiderCollapsed(false)}
+          />
+        ) : null}
       </div>
     </div>
   )
