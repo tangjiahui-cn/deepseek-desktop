@@ -12,3 +12,7 @@ release/
 !.env.example
 tmp/
 .test-*/
+
+# OpenSpec 生成的 agent skills 只在本地使用；其他 skills 仍可提交
+.agents/skills/openspec-*/
+.agents/skills/.openspec-target
