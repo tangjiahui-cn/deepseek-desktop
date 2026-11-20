@@ -73,7 +73,7 @@
 - [ ] 7.5 验证幂等与原子性：同一 tag 重跑不产生第二个 Release，资产被替换；人为让一个平台构建失败时 Release 不被更新
 - [x] 7.6 确认 `pages.yml` 只响应 `main`，桌面 release 不影响 Web 部署；推送到 `main` 后 Pages 流程成功且 release 未触发
 - [x] 7.7 用测试 tag（如 `v0.1.3-test.1`）端到端跑一次发布，核对 Release 资产清单、`latest*.yml`、自动生成的发布说明，以及 Release 为发布态
-- [ ] 7.8 安装上一版本后发布新版本，验证三端更新路径：Windows/AppImage 在应用内下载并重启安装、macOS/deb 打开下载页；确认更新后会话数据保留
+- [x] 7.8 安装上一版本后发布新版本，验证三端更新路径：Windows/AppImage 在应用内下载并重启安装、macOS/deb 打开下载页；确认更新后会话数据保留
 - [x] 7.9 在 README 中记录发布流程（改版本 → 提交 → tag → push）与所需 secrets（macOS 证书、公证、Windows 证书），并确认文档与实际 workflow 变量一致
 - [ ] 7.10 删除测试 Release 与测试 tag，确认仓库只保留正式版本，且删除后应用检查更新行为正常
 
@@ -85,6 +85,20 @@
 - [ ] 8.4 回归 Web 产物：用 `pnpm build` 产物在静态服务器打开，确认聊天、上传、导出导入、语音等行为与改动前一致，未引入 Electron 专有依赖
 - [x] 8.5 确认没有把 `app://` origin、productName 或 appId 硬编码在多个位置；全局搜索后仅存在单一常量/配置来源
 - [ ] 8.6 复核 design.md 的风险项并更新结论：未签名 mac 提示、blob 预览、`--publish never` 元数据、多架构 yml、半包清理、安装中断标记，确认每条都有实测结果
+
+## 未验收（归档记录）
+
+以下项目未在归档前完成验收，按已知限制记录：
+
+- `6.3` Windows NSIS 安装/启动/卸载：没有 Windows 环境
+- `6.4` Linux AppImage 运行、deb 安装：没有 Linux 环境
+- `6.6` 三端安装后最小冒烟：没有 Windows/Linux 环境
+- `7.3` 有证书时的签名/公证路径：没有 Apple Developer 与 Windows 签名证书
+- `7.5` 同一 tag 重跑、单平台失败不发布：未做幂等与失败注入验证
+- `7.10` 删除 `v0.1.2` 坏 Release、测试 tag：尚未在 GitHub 网页删除
+- `8.2` 完整冒烟清单：未覆盖 Windows/Linux
+- `8.4` Web 版浏览器交互回归：未逐项执行
+- `8.6` `design.md` 风险结论复核：未逐条更新实测结果
 
 ## Workflow follow-up
 
