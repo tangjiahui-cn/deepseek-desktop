@@ -64,7 +64,9 @@ module.exports = {
       NSMicrophoneUsageDescription:
         'DeepSeek Desktop uses the microphone when you start voice input.',
     },
-    identity: hasMacCertificate ? undefined : null,
+    // 没有 Developer ID 时也要 ad-hoc 重签整个 app bundle：
+    // Electron 原始签名不覆盖后加入的 app.asar，Apple Silicon 会报「已损坏」
+    identity: hasMacCertificate ? undefined : '-',
     notarize: hasNotarization,
     icon: 'build/icon.icns',
   },

@@ -45,6 +45,7 @@ pnpm build
 
 - macOS 首次启动会被 Gatekeeper 拦截。打开 **系统设置 → 隐私与安全性**，点击 **仍要打开**。如果仍被拦截，可执行 `xattr -dr com.apple.quarantine "/Applications/DeepSeek Desktop.app"`。
 - Windows 可能提示未知发布者。选择 **更多信息 → 仍要运行**。
+- macOS 构建会做 ad-hoc 签名，Apple 芯片在系统里放行后可以运行，但没有公证。如果旧版本提示 **“DeepSeek Desktop”已损坏**，请下载最新版本的安装包。
 
 ### 更新
 

@@ -45,6 +45,7 @@ The current builds are **not code-signed**:
 
 - On macOS, the first launch is blocked by Gatekeeper. Open **System Settings → Privacy & Security**, then click **Open Anyway**. If the app is still blocked, run `xattr -dr com.apple.quarantine "/Applications/DeepSeek Desktop.app"`.
 - On Windows, SmartScreen may warn about an unknown publisher. Choose **More info → Run anyway**.
+- macOS builds are ad-hoc signed so Apple silicon can launch them after approval; they are not notarized. If an older build reports **"DeepSeek Desktop is damaged"**, download the latest release instead.
 
 ### Updates
 
