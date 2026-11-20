@@ -85,20 +85,35 @@ jobs:
         if: matrix.platform == 'mac'
         shell: bash
         env:
-          CSC_LINK: ${{ secrets.MAC_CERT_P12 }}
-          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          MAC_CERT_P12: ${{ secrets.MAC_CERT_P12 }}
+          MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: pnpm exec electron-builder --config electron-builder.config.cjs --mac --x64 --arm64 --publish never
+        run: |
+          # 空字符串会被 electron-builder 当成路径并解析成 workspace；没有证书时必须 unset
+          if [ -n "${MAC_CERT_P12:-}" ]; then
+            export CSC_LINK="$MAC_CERT_P12"
+            export CSC_KEY_PASSWORD="${MAC_CERT_PASSWORD:-}"
+          else
+            unset CSC_LINK CSC_KEY_PASSWORD
+          fi
+          pnpm exec electron-builder --config electron-builder.config.cjs --mac --x64 --arm64 --publish never
 
       - name: Package (Windows)
         if: matrix.platform == 'win'
         shell: bash
         env:
-          CSC_LINK: ${{ secrets.WIN_CERT_P12 }}
-          CSC_KEY_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
-        run: pnpm exec electron-builder --config electron-builder.config.cjs --win --x64 --publish never
+          WIN_CERT_P12: ${{ secrets.WIN_CERT_P12 }}
+          WIN_CERT_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
+        run: |
+          if [ -n "${WIN_CERT_P12:-}" ]; then
+            export CSC_LINK="$WIN_CERT_P12"
+            export CSC_KEY_PASSWORD="${WIN_CERT_PASSWORD:-}"
+          else
+            unset CSC_LINK CSC_KEY_PASSWORD
+          fi
+          pnpm exec electron-builder --config electron-builder.config.cjs --win --x64 --publish never
 
       - name: Package (Linux)
         if: matrix.platform == 'linux'
