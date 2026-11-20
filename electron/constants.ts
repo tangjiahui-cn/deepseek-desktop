@@ -11,6 +11,8 @@ export const APP_ORIGIN = `${APP_SCHEME}://${APP_HOST}`
 
 export const APP_ID = __APP_ID__
 export const PRODUCT_NAME = __PRODUCT_NAME__
+/** 界面显示名；PRODUCT_NAME 继续作为安装包与 userData 的稳定身份 */
+export const DISPLAY_NAME = 'DeepSeek'
 export const GITHUB_OWNER = __GITHUB_OWNER__
 export const GITHUB_REPO = __GITHUB_REPO__
 

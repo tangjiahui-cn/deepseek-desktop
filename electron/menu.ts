@@ -6,7 +6,7 @@ import {
   type BrowserWindow,
   type MenuItemConstructorOptions,
 } from 'electron'
-import { PRODUCT_NAME, RELEASES_URL } from './constants'
+import { DISPLAY_NAME, RELEASES_URL } from './constants'
 
 const isZh = () => app.getLocale().toLowerCase().startsWith('zh')
 const text = (zhText: string, enText: string) => (isZh() ? zhText : enText)
@@ -17,7 +17,7 @@ export const showAbout = async (getWindow: () => BrowserWindow | null) => {
   const options = {
     type: 'info' as const,
     title: text('关于', 'About'),
-    message: `${PRODUCT_NAME} ${app.getVersion()}`,
+    message: `${DISPLAY_NAME} ${app.getVersion()}`,
     detail: [
       `Electron ${process.versions.electron}`,
       `Chromium ${process.versions.chrome}`,
@@ -41,12 +41,12 @@ type MenuOptions = {
 export const createAppMenu = ({ isDev, onCheckUpdates, getWindow }: MenuOptions) => {
   const checkUpdatesLabel = text('检查更新…', 'Check for Updates…')
   const releasesLabel = text('发布页面', 'Releases')
-  const aboutLabel = text(`关于 ${PRODUCT_NAME}`, `About ${PRODUCT_NAME}`)
+  const aboutLabel = text(`关于 ${DISPLAY_NAME}`, `About ${DISPLAY_NAME}`)
   const template: MenuItemConstructorOptions[] = []
 
   if (process.platform === 'darwin') {
     template.push({
-      label: app.name,
+      label: DISPLAY_NAME,
       submenu: [
         { label: aboutLabel, click: () => void showAbout(getWindow) },
         { type: 'separator' },
@@ -56,7 +56,7 @@ export const createAppMenu = ({ isDev, onCheckUpdates, getWindow }: MenuOptions)
         { role: 'hideOthers', label: text('隐藏其他', 'Hide Others') },
         { role: 'unhide', label: text('显示全部', 'Show All') },
         { type: 'separator' },
-        { role: 'quit', label: text(`退出 ${PRODUCT_NAME}`, `Quit ${PRODUCT_NAME}`) },
+        { role: 'quit', label: text(`退出 ${DISPLAY_NAME}`, `Quit ${DISPLAY_NAME}`) },
       ],
     })
   } else {

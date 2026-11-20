@@ -9,7 +9,7 @@ import {
 import { autoUpdater, CancellationToken } from 'electron-updater'
 import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
-import { PRODUCT_NAME, RELEASES_URL, releasePageUrl } from './constants'
+import { DISPLAY_NAME, RELEASES_URL, releasePageUrl } from './constants'
 
 export type UpdatePhase =
   | 'idle'
@@ -228,7 +228,7 @@ export const checkInstallMarker = async (): Promise<'quit' | 'continue'> => {
     if (Date.now() - startedAt < 2 * 60 * 1000) {
       await dialog.showMessageBox({
         type: 'info',
-        title: PRODUCT_NAME,
+        title: DISPLAY_NAME,
         message: text('更新正在安装', 'Update in progress'),
         detail: text(
           '安装程序仍在运行，请稍候再启动应用。',
@@ -255,7 +255,7 @@ const showDownloadedNotification = () => {
     return
   }
   const notification = new Notification({
-    title: PRODUCT_NAME,
+    title: DISPLAY_NAME,
     body: text('更新已下载，点击打开应用完成安装', 'Update downloaded. Open the app to install it.'),
   })
   notification.on('click', () => {
@@ -545,7 +545,7 @@ export const ackPrepare = () => {
 const promptToInstallOnQuit = async () => {
   const options: MessageBoxOptions = {
     type: 'question',
-    title: PRODUCT_NAME,
+    title: DISPLAY_NAME,
     message: text('更新已下载', 'Update downloaded'),
     detail: text(
       `新版本 v${state.latestVersion ?? ''} 已下载。现在安装并退出，还是直接退出？`,

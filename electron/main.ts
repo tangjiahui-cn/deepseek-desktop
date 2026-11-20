@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeTheme } from 'electron'
 import { mkdirSync } from 'node:fs'
 import path from 'node:path'
-import { APP_ID, APP_ORIGIN, PRODUCT_NAME } from './constants'
+import { APP_ID, APP_ORIGIN, DISPLAY_NAME, PRODUCT_NAME } from './constants'
 import { createAppMenu } from './menu'
 import { registerAppProtocol, registerAppScheme } from './protocol'
 import { attachSecurity, setupDownloads, setupPermissions } from './security'
@@ -41,7 +41,7 @@ const createMainWindow = () => {
     minWidth: MIN_WINDOW_SIZE.width,
     minHeight: MIN_WINDOW_SIZE.height,
     show: false,
-    title: PRODUCT_NAME,
+    title: DISPLAY_NAME,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#1f1f1f' : '#ffffff',
     icon: app.isPackaged ? undefined : path.join(__dirname, '../../build/icon.png'),
     webPreferences: {
@@ -58,7 +58,7 @@ const createMainWindow = () => {
 
   win.on('page-title-updated', (event) => {
     event.preventDefault()
-    win.setTitle(PRODUCT_NAME)
+    win.setTitle(DISPLAY_NAME)
   })
   // macOS 上 Cmd+W / 红色关闭按钮只隐藏窗口：renderer 不销毁，输入框、
   // 草稿、附件和滚动位置都保留；真正退出（Cmd+Q / 菜单）时放行。
@@ -104,7 +104,7 @@ const showInterruptedNotice = async (win: BrowserWindow) => {
   }
   await dialog.showMessageBox(win, {
     type: 'info',
-    title: PRODUCT_NAME,
+    title: DISPLAY_NAME,
     message: app.getLocale().toLowerCase().startsWith('zh')
       ? '上次更新未完成'
       : 'The last update did not finish',
