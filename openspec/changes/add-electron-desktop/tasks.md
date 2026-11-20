@@ -57,22 +57,22 @@
 ## 6. 打包
 
 - [x] 6.1 编写 `electron-builder.config.cjs` 基础配置：productName、appId、输出目录、files、asar、artifactName（含版本与架构）；运行 `pnpm exec electron-builder --dir` 成功且 `app.asar` 内只含预期文件
-- [ ] 6.2 配置 macOS：dmg + zip、x64 与 arm64 同一次调用、hardened runtime、entitlements、麦克风用途说明；`pnpm dist:mac` 产出两个架构的 dmg/zip，`plutil` 或 `codesign -d --entitlements` 显示音频输入权限与用途说明
+- [x] 6.2 配置 macOS：dmg + zip、x64 与 arm64 同一次调用、hardened runtime、entitlements、麦克风用途说明；`pnpm dist:mac` 产出两个架构的 dmg/zip，`plutil` 或 `codesign -d --entitlements` 显示音频输入权限与用途说明
 - [ ] 6.3 配置 Windows：NSIS x64、可选安装目录、非 per-machine；在 Windows 构建（本地或 CI）后安装、启动、卸载各一次，安装目录与卸载项正常
 - [ ] 6.4 配置 Linux：AppImage + deb x64、category、maintainer；在 Linux 构建后分别运行 AppImage 与安装 deb，两者都能启动并创建会话
 - [x] 6.5 提供 `build/icon.png`（1024×1024 占位图）并确认 electron-builder 生成 `.icns` 与 `.ico`，三端安装包与窗口显示该图标
 - [ ] 6.6 在三端分别安装打包产物，完成一次最小冒烟：启动、输入 API Key、发一条消息、重启后会话仍在；记录平台与结果
-- [ ] 6.7 检查 `release/` 中 `latest.yml`、`latest-mac.yml`、`latest-linux.yml` 均存在，mac 元数据覆盖 x64 与 arm64，且引用的文件名与实际产物一致
+- [x] 6.7 检查 `release/` 中 `latest.yml`、`latest-mac.yml`、`latest-linux.yml` 均存在，mac 元数据覆盖 x64 与 arm64，且引用的文件名与实际产物一致
 
 ## 7. CI 自动发布
 
-- [ ] 7.1 新增 `.github/workflows/release.yml`：`push` tags `v*` 与带 tag 输入的 `workflow_dispatch` 触发，`contents: write`，按 tag 设置 concurrency；推送普通提交不触发，推送 tag 触发
-- [ ] 7.2 实现 build matrix（macos-latest / windows-latest / ubuntu-latest），每 job 依次 type、lint、renderer build、main build、electron-builder `--publish never`，并上传 `release/` artifact；三 job 在测试 tag 上全部成功
+- [x] 7.1 新增 `.github/workflows/release.yml`：`push` tags `v*` 与带 tag 输入的 `workflow_dispatch` 触发，`contents: write`，按 tag 设置 concurrency；推送普通提交不触发，推送 tag 触发
+- [x] 7.2 实现 build matrix（macos-latest / windows-latest / ubuntu-latest），每 job 依次 type、lint、renderer build、main build、electron-builder `--publish never`，并上传 `release/` artifact；三 job 在测试 tag 上全部成功
 - [ ] 7.3 实现签名条件开关：macOS 仅在提供证书与公证凭据时签名/公证，Windows 仅在提供证书时签名；无 secrets 时三端未签名构建仍成功，有凭据时按 design.md 的变量名生效
-- [ ] 7.4 实现 release job：校验 tag 与 `package.json` 版本一致、下载全部 artifact、断言所需 `latest*.yml` 存在、创建或复用 Release 并以 `--clobber` 上传；版本不一致时流水线失败且不产生资产
+- [x] 7.4 实现 release job：校验 tag 与 `package.json` 版本一致、下载全部 artifact、断言所需 `latest*.yml` 存在、创建或复用 Release 并以 `--clobber` 上传；版本不一致时流水线失败且不产生资产
 - [ ] 7.5 验证幂等与原子性：同一 tag 重跑不产生第二个 Release，资产被替换；人为让一个平台构建失败时 Release 不被更新
-- [ ] 7.6 确认 `pages.yml` 只响应 `main`，桌面 release 不影响 Web 部署；推送到 `main` 后 Pages 流程成功且 release 未触发
-- [ ] 7.7 用测试 tag（如 `v0.1.3-test.1`）端到端跑一次发布，核对 Release 资产清单、`latest*.yml`、自动生成的发布说明，以及 Release 为发布态
+- [x] 7.6 确认 `pages.yml` 只响应 `main`，桌面 release 不影响 Web 部署；推送到 `main` 后 Pages 流程成功且 release 未触发
+- [x] 7.7 用测试 tag（如 `v0.1.3-test.1`）端到端跑一次发布，核对 Release 资产清单、`latest*.yml`、自动生成的发布说明，以及 Release 为发布态
 - [ ] 7.8 安装上一版本后发布新版本，验证三端更新路径：Windows/AppImage 在应用内下载并重启安装、macOS/deb 打开下载页；确认更新后会话数据保留
 - [x] 7.9 在 README 中记录发布流程（改版本 → 提交 → tag → push）与所需 secrets（macOS 证书、公证、Windows 证书），并确认文档与实际 workflow 变量一致
 - [ ] 7.10 删除测试 Release 与测试 tag，确认仓库只保留正式版本，且删除后应用检查更新行为正常
