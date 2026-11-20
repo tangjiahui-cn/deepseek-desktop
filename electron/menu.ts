@@ -12,7 +12,8 @@ const isZh = () => app.getLocale().toLowerCase().startsWith('zh')
 const text = (zhText: string, enText: string) => (isZh() ? zhText : enText)
 
 export const showAbout = async (getWindow: () => BrowserWindow | null) => {
-  const parent = getWindow()
+  const candidate = getWindow()
+  const parent = candidate != null && candidate.isVisible() ? candidate : null
   const options = {
     type: 'info' as const,
     title: text('关于', 'About'),

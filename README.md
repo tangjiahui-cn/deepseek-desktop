@@ -49,6 +49,8 @@ The current builds are **not code-signed**:
 
 ### Updates
 
+On macOS, **⌘W** or the red close button hides the window instead of quitting. Reopening the app restores the same conversation, input draft, and attachments. Use **⌘Q** to quit completely.
+
 Updates are explicit: nothing is downloaded or installed until you choose to do so.
 
 - When a newer stable release is available, a dismissible tag appears near the sidebar settings entry. Closing it hides that version until a newer one appears or you run **Check for Updates** from the menu.

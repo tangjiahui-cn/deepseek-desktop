@@ -26,6 +26,8 @@ import { attachWindowState, loadWindowState, MIN_WINDOW_SIZE } from './windowSta
 registerAppScheme()
 
 let mainWindow: BrowserWindow | null = null
+/** 真正退出应用时为 true；macOS 的 Cmd+W 只隐藏窗口，保留 renderer 状态 */
+let quitting = false
 
 const getMainWindow = () => mainWindow
 
@@ -57,6 +59,14 @@ const createMainWindow = () => {
   win.on('page-title-updated', (event) => {
     event.preventDefault()
     win.setTitle(PRODUCT_NAME)
+  })
+  // macOS 上 Cmd+W / 红色关闭按钮只隐藏窗口：renderer 不销毁，输入框、
+  // 草稿、附件和滚动位置都保留；真正退出（Cmd+Q / 菜单）时放行。
+  win.on('close', (event) => {
+    if (process.platform === 'darwin' && !quitting) {
+      event.preventDefault()
+      win.hide()
+    }
   })
   win.once('ready-to-show', () => win.show())
   win.on('closed', () => {
@@ -135,13 +145,24 @@ const start = () => {
   })
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      mainWindow = createMainWindow()
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore()
+      }
+      mainWindow.show()
+      mainWindow.focus()
+      return
     }
+    mainWindow = createMainWindow()
   })
 
   app.on('before-quit', (event) => {
     void handleBeforeQuit(event)
+    // handleBeforeQuit 在需要弹「安装并退出」时会同步 preventDefault；
+    // 只有没有被拦下时才允许窗口 close 事件销毁 renderer。
+    if (!event.defaultPrevented) {
+      quitting = true
+    }
   })
 
   void app.whenReady().then(async () => {

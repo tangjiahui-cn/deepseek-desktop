@@ -560,8 +560,10 @@ const promptToInstallOnQuit = async () => {
     cancelId: 2,
   }
   const parent = getWindow()
-  const result = parent
-    ? await dialog.showMessageBox(parent, options)
+  // 窗口可能被 Cmd+W 隐藏；隐藏窗口上的 sheet 不可见，改用独立对话框
+  const visibleParent = parent != null && parent.isVisible() ? parent : null
+  const result = visibleParent
+    ? await dialog.showMessageBox(visibleParent, options)
     : await dialog.showMessageBox(options)
 
   if (result.response === 0) {
