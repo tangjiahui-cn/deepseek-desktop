@@ -24,6 +24,18 @@ declare const styles: {
   readonly "promptLabel": string;
   readonly "promptInput": string;
   readonly "promptCount": string;
+  readonly "memory": string;
+  readonly "memoryHeader": string;
+  readonly "memoryHeaderText": string;
+  readonly "memorySwitch": string;
+  readonly "memorySwitchOn": string;
+  readonly "memorySwitchKnob": string;
+  readonly "memoryNotice": string;
+  readonly "memoryPaused": string;
+  readonly "memoryProfileHeader": string;
+  readonly "memoryProfileMeta": string;
+  readonly "memoryProfileInput": string;
+  readonly "memoryProfileActions": string;
   readonly "error": string;
   readonly "apiKey": string;
   readonly "apiKeySaved": string;

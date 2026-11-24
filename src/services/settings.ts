@@ -8,7 +8,7 @@ export type Locale = 'zh-CN' | 'en-US'
 /** 主题偏好；默认跟随系统 */
 export type ThemePreference = 'light' | 'dark' | 'system'
 
-/** 本机设置，存 localStorage：API Key、语言、主题、位置、朗读音色、自定义提示词、深度思考与智能搜索开关、侧边栏收起状态 */
+/** 本机设置，存 localStorage：API Key、语言、主题、位置、朗读音色、自定义提示词、记忆开关、深度思考与智能搜索开关、侧边栏收起状态 */
 type Settings = {
   apiKey: string | null
   locale: Locale
@@ -16,6 +16,8 @@ type Settings = {
   location: UserLocation | null
   ttsVoice: TtsVoice
   systemPrompt: string
+  memoryEnabled: boolean
+  memoryEnabledAt: number | null
   thinking: boolean
   search: boolean
   siderCollapsed: boolean
@@ -28,6 +30,8 @@ const KEYS = {
   themePreference: 'chat-demo:theme-preference',
   ttsVoice: 'chat-demo:tts-voice',
   systemPrompt: 'chat-demo:system-prompt',
+  memoryEnabled: 'chat-demo:memory-enabled',
+  memoryEnabledAt: 'chat-demo:memory-enabled-at',
   thinking: 'chat-demo:thinking',
   search: 'chat-demo:search',
   siderCollapsed: 'chat-demo:sider-collapsed',
@@ -93,17 +97,30 @@ const initialTtsVoice = (): TtsVoice => (read(KEYS.ttsVoice) === 'tide' ? 'tide'
 /** 历史内容可能超过上限，读取时统一截断，避免旧数据绕过限制。 */
 const initialSystemPrompt = (): string => clampSystemPrompt(read(KEYS.systemPrompt) ?? '')
 
-export const useSettings = create<Settings>(() => ({
-  apiKey: read(KEYS.apiKey),
-  locale: initialLocale(),
-  location: initialLocation(),
-  themePreference: initialThemePreference(),
-  ttsVoice: initialTtsVoice(),
-  systemPrompt: initialSystemPrompt(),
-  thinking: read(KEYS.thinking) === 'true',
-  search: read(KEYS.search) === 'true',
-  siderCollapsed: read(KEYS.siderCollapsed) === 'true',
-}))
+const initialMemoryEnabled = (): boolean => read(KEYS.memoryEnabled) === 'true'
+
+/** 开启记忆时必须有一个启用时间；旧数据缺少时间时按当前时间处理，避免误处理旧历史。 */
+const initialMemoryEnabledAt = (): number | null => {
+  const value = Number(read(KEYS.memoryEnabledAt))
+  return Number.isFinite(value) && value > 0 ? value : null
+}
+
+export const useSettings = create<Settings>(() => {
+  const memoryEnabled = initialMemoryEnabled()
+  return {
+    apiKey: read(KEYS.apiKey),
+    locale: initialLocale(),
+    location: initialLocation(),
+    themePreference: initialThemePreference(),
+    ttsVoice: initialTtsVoice(),
+    systemPrompt: initialSystemPrompt(),
+    memoryEnabled,
+    memoryEnabledAt: memoryEnabled ? (initialMemoryEnabledAt() ?? Date.now()) : null,
+    thinking: read(KEYS.thinking) === 'true',
+    search: read(KEYS.search) === 'true',
+    siderCollapsed: read(KEYS.siderCollapsed) === 'true',
+  }
+})
 
 export const setLocale = (locale: Locale) => {
   write(KEYS.locale, locale)
@@ -131,6 +148,16 @@ export const setSystemPrompt = (value: string) => {
   const systemPrompt = clampSystemPrompt(value)
   write(KEYS.systemPrompt, systemPrompt || null)
   useSettings.setState({ systemPrompt })
+}
+
+/** 开启时重置启用时间：关闭期间产生的消息不进入记忆；已有条目继续保留。 */
+export const setMemoryEnabled = (memoryEnabled: boolean) => {
+  const memoryEnabledAt = memoryEnabled ? Date.now() : useSettings.getState().memoryEnabledAt
+  write(KEYS.memoryEnabled, String(memoryEnabled))
+  if (memoryEnabled) {
+    write(KEYS.memoryEnabledAt, String(memoryEnabledAt))
+  }
+  useSettings.setState({ memoryEnabled, memoryEnabledAt })
 }
 
 export const setApiKey = (apiKey: string | null) => {

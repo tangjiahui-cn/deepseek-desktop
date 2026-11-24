@@ -20,6 +20,7 @@ DeepSeek Desktop is a chat app powered by the DeepSeek API, available as a stati
 
 - **Local-first:** Settings, conversations, drafts, and original attachments stay on your device; no account required.
 - **Personalized:** Save a custom prompt in Settings to shape answers around the way you write.
+- **Long-term memory:** Opt in to let the assistant distill a few durable facts and preferences from new chats for later conversations.
 - **Consistent everywhere:** The same React interface runs in the browser and in Electron.
 - **Updates on your terms:** The desktop app never downloads or installs an update without confirmation.
 

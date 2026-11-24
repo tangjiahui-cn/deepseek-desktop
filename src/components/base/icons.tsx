@@ -104,6 +104,17 @@ export const IconDownloadOutline16 = () => (
   </svg>
 )
 
+export const IconMemoryOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M4 1.5A2.5 2.5 0 0 0 1.5 4v11.5a1 1 0 0 0 1.6.8L8 12.27l4.9 4.03a1 1 0 0 0 1.6-.8V4A2.5 2.5 0 0 0 12 1.5H4Zm0 1.5h8c.55 0 1 .45 1 1v9.43l-3.9-3.2a1 1 0 0 0-1.24 0L3 13.43V4c0-.55.45-1 1-1Z"
+      fill="currentColor"
+    />
+  </svg>
+)
+
 export const IconPersonalizationOutline16 = () => (
   <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path

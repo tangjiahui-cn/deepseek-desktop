@@ -16,10 +16,11 @@ export const clampSystemPrompt = (value: string): string => {
 }
 
 /**
- * 把用户提示词追加到内置身份说明之后，两者以一个空行分隔。
- * 空内容或仅含空白字符时只返回身份说明，保持与未启用该功能时一致。
+ * 把用户提示词与长期记忆追加到内置身份说明之后；各部分之间以一个空行分隔。
+ * 提示词为空时跳过；记忆为空串时输出与未启用记忆完全一致。
  */
-export const composeSystemPrompt = (custom: string): string => {
+export const composeSystemPrompt = (custom: string, memoryBlock = ''): string => {
   const prompt = custom.trim()
-  return prompt ? `${SYSTEM_PROMPT_BASE}\n\n${prompt}` : SYSTEM_PROMPT_BASE
+  const memory = memoryBlock.trim()
+  return [SYSTEM_PROMPT_BASE, prompt, memory].filter(Boolean).join('\n\n')
 }

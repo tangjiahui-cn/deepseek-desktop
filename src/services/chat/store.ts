@@ -4,6 +4,15 @@ import { ApiError, streamMessage } from '../api/client.js'
 import type { ChatModel, CreateMessageRequest } from '../api/types.js'
 import { extractFileIds, getFileErrorCode, isRetryableApiError } from '../api/errors.js'
 import { cancelUpload, describeUploadError, uploadAttachment, useUploads } from '../attachments.js'
+import {
+  deferMemoryForSession,
+  flushMemoryForSession,
+  getMemoryBlock,
+  initMemory,
+  scheduleMemoryExtraction,
+  stopMemory,
+} from '../memory/extract.js'
+import { clearMemoryCheckpoints, forgetMemoryCheckpoint } from '../memory/store.js'
 import { useSettings } from '../settings.js'
 import { appendBranch, getVisibleMessages, normalizeSession, selectVersion } from './branches.js'
 import * as db from './db.js'
@@ -301,6 +310,7 @@ export const initChat = (): Promise<void> => {
       const summaries = await db.loadSessionSummaries()
       if (epoch === historyEpoch) {
         set({ ready: true, sessions: sortSessions(summaries) })
+        void initMemory()
       }
     } catch (error) {
       if (epoch === historyEpoch) {
@@ -394,6 +404,7 @@ export const replaceHistory = async (write: () => Promise<void>): Promise<number
   }
   set({ importingHistory: true })
   try {
+    stopMemory()
     for (const controller of Object.values(get().streaming)) {
       controller.abort()
     }
@@ -416,6 +427,7 @@ export const replaceHistory = async (write: () => Promise<void>): Promise<number
     unsavedSessions.clear()
     pendingFiles.clear()
     clearAllDrafts()
+    clearMemoryCheckpoints()
     set({
       ready: true,
       initError: false,
@@ -441,6 +453,10 @@ export const replaceHistory = async (write: () => Promise<void>): Promise<number
 
 export const newChat = () => {
   if (!get().importingHistory) {
+    const previous = get().activeId
+    if (previous) {
+      flushMemoryForSession(previous)
+    }
     set({ activeId: null })
     trimSessionCache()
   }
@@ -448,6 +464,10 @@ export const newChat = () => {
 
 export const selectSession = (id: string) => {
   if (!get().importingHistory && get().sessions.some((session) => session.id === id)) {
+    const previous = get().activeId
+    if (previous && previous !== id) {
+      flushMemoryForSession(previous)
+    }
     touchSession(id)
     set({ activeId: id })
     void ensureSessionLoaded(id)
@@ -503,6 +523,7 @@ const removeSessionData = async (id: string): Promise<boolean> => {
     if (epoch !== historyEpoch) {
       return true
     }
+    forgetMemoryCheckpoint(id)
     sessionLoads.delete(id)
     sessionAccess.delete(id)
     unsavedSessions.delete(id)
@@ -959,6 +980,7 @@ const waitForRetry = (attempt: number, signal: AbortSignal) =>
  * 服务端判定 file_id 失效时重新补传后重发，退避重试且次数有上限，超过则按原始报错收尾。
  */
 const streamReply = async (sessionId: string, initial: AssistantMessage, request: Request) => {
+  deferMemoryForSession(sessionId)
   const controller = new AbortController()
   if (!getSession(sessionId)?.title) {
     titleRequests.add(controller)
@@ -999,7 +1021,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           useSettings.getState().apiKey ?? '',
           {
             model: initial.model ?? MODEL,
-            system: composeSystemPrompt(useSettings.getState().systemPrompt),
+            system: composeSystemPrompt(useSettings.getState().systemPrompt, getMemoryBlock()),
             messages,
             thinking: { type: initial.thinking ? 'enabled' : 'disabled' },
             safety_check: SAFETY_CHECK,
@@ -1089,5 +1111,6 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
       ),
     }))
     persist(sessionId)
+    scheduleMemoryExtraction(sessionId)
   }
 }
