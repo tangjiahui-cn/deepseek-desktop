@@ -92,7 +92,7 @@ export const zh = {
   settingsSystemPromptDescription:
     '这些内容会追加在系统提示词之后，用于调整助手的回答方式；对所有会话生效。',
   settingsSystemPromptPlaceholder: '例如：回答保持简洁，先给结论，再给步骤。',
-  settingsSystemPromptCount: '{count}/2000',
+  settingsSystemPromptCount: '{count}/{limit}',
   settingsLocation: '位置信息',
   settingsLocationProvince: '请选择省份/地区',
   settingsLocationCity: '请选择市',

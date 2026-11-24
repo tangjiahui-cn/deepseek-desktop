@@ -2,7 +2,7 @@
 export const SYSTEM_PROMPT_BASE = '该助手为DeepSeek，由深度求索公司创造。'
 
 /** 自定义提示词的最大长度，按 Unicode 码点计数。 */
-export const SYSTEM_PROMPT_LIMIT = 2000
+export const SYSTEM_PROMPT_LIMIT = 20000
 
 /**
  * 把提示词限制在上限内：超出部分按 Unicode 码点截断，避免从中间拆开代理对。

@@ -18,6 +18,7 @@ import {
 } from '../../services/chat/backup.js'
 import { useIsMobile } from '../../app/viewport.js'
 import { useChatStore } from '../../services/chat/store.js'
+import { SYSTEM_PROMPT_LIMIT } from '../../services/chat/systemPrompt.js'
 import { regionCodes, getRegionName, provinces } from '../../services/location.js'
 import {
   isChineseBrowser,
@@ -322,7 +323,7 @@ const PersonalizationSetting = () => {
         onChange={(event) => setSystemPrompt(event.target.value)}
       />
       <div className={styles.promptCount} id="settings-system-prompt-count">
-        {t('settingsSystemPromptCount', { count })}
+        {t('settingsSystemPromptCount', { count, limit: SYSTEM_PROMPT_LIMIT })}
       </div>
     </div>
   )

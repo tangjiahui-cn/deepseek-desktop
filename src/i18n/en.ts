@@ -97,7 +97,7 @@ export const en = {
   settingsSystemPromptDescription:
     'Appended to the system prompt to shape how the assistant replies. Applies to all chats.',
   settingsSystemPromptPlaceholder: 'e.g. Keep answers concise: conclusion first, then steps.',
-  settingsSystemPromptCount: '{count}/2000',
+  settingsSystemPromptCount: '{count}/{limit}',
   settingsLocation: 'Location',
   settingsLocationProvince: 'Select province/region',
   settingsLocationCity: 'Select city',
