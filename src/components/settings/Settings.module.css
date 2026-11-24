@@ -198,6 +198,53 @@
   color: var(--dsw-alias-label-tertiary);
 }
 
+.prompt {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0 16px;
+}
+
+.promptLabel {
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.promptInput {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 148px;
+  max-height: 320px;
+  padding: 10px 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background-color: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 14px;
+  line-height: 22px;
+  resize: vertical;
+  outline: none;
+  transition: border-color var(--ds-transition-duration) var(--ds-ease-in-out);
+
+  &::placeholder {
+    color: var(--dsw-alias-label-caption);
+  }
+
+  &:focus-visible {
+    border-color: var(--dsw-alias-brand-primary);
+  }
+}
+
+.promptCount {
+  align-self: flex-end;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+  user-select: none;
+}
+
 .error {
   font-size: 12px;
   line-height: 18px;
@@ -335,6 +382,11 @@
 
   .text {
     padding-right: 8px;
+  }
+
+  .promptInput {
+    min-height: 180px;
+    font-size: 16px;
   }
 
   .cellButton {

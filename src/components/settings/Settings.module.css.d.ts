@@ -20,6 +20,10 @@ declare const styles: {
   readonly "themeOption": string;
   readonly "themeOptionSelected": string;
   readonly "description": string;
+  readonly "prompt": string;
+  readonly "promptLabel": string;
+  readonly "promptInput": string;
+  readonly "promptCount": string;
   readonly "error": string;
   readonly "apiKey": string;
   readonly "apiKeySaved": string;

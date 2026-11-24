@@ -6,6 +6,7 @@ import {
   IconDownloadOutline16,
   IconFollowsystemOutline16,
   IconLightOutline16,
+  IconPersonalizationOutline16,
   IconSettingsOutline16,
   IconUploadOutline14,
 } from '../base/icons.js'
@@ -22,6 +23,7 @@ import {
   isChineseBrowser,
   setLocale,
   setLocation,
+  setSystemPrompt,
   setThemePreference,
   setTtsVoice,
   useSettings,
@@ -37,7 +39,7 @@ import { closeSettings, useSettingsDialog, type SettingsSection } from './settin
 import styles from './Settings.module.css'
 
 /**
- * 设置弹窗：分「通用设置」（主题、语言、朗读音色、位置）与「数据管理」（API Key、导入、导出、删除）。
+ * 设置弹窗：分「通用设置」（主题、语言、朗读音色、位置）、「个性化」（提示词）与「数据管理」（API Key、导入、导出、删除）。
  * 桌面端为居中弹窗、左侧导航；移动端为底部弹层、导航横排在内容上方
  */
 export const SettingsDialog = () => {
@@ -50,6 +52,11 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
     value: 'general',
     label: 'settingDialogAsideGeneralOptionLabel',
     icon: <IconSettingsOutline16 />,
+  },
+  {
+    value: 'personalization',
+    label: 'settingDialogAsidePersonalizationOptionLabel',
+    icon: <IconPersonalizationOutline16 />,
   },
   { value: 'data', label: 'settingDialogAsideDataOptionLabel', icon: <IconDataOutline16 /> },
 ]
@@ -101,6 +108,8 @@ const SettingsContent = () => {
               <TtsVoiceSetting />
               <LocationSetting />
             </>
+          ) : section === 'personalization' ? (
+            <PersonalizationSetting />
           ) : (
             <>
               <ApiKeyField editor={apiKeyEditor} />
@@ -288,6 +297,34 @@ const LocaleSetting = () => {
         />
       }
     />
+  )
+}
+
+/** 全部会话共用的自定义提示词；编辑即保存，清空后恢复只发送内置身份说明。 */
+const PersonalizationSetting = () => {
+  const t = useTranslate()
+  const systemPrompt = useSettings((state) => state.systemPrompt)
+  const count = Array.from(systemPrompt).length
+  return (
+    <div className={styles.prompt}>
+      <label className={styles.promptLabel} htmlFor="settings-system-prompt">
+        {t('settingsSystemPrompt')}
+      </label>
+      <div className={styles.description} id="settings-system-prompt-description">
+        {t('settingsSystemPromptDescription')}
+      </div>
+      <textarea
+        id="settings-system-prompt"
+        className={styles.promptInput}
+        value={systemPrompt}
+        placeholder={t('settingsSystemPromptPlaceholder')}
+        aria-describedby="settings-system-prompt-description settings-system-prompt-count"
+        onChange={(event) => setSystemPrompt(event.target.value)}
+      />
+      <div className={styles.promptCount} id="settings-system-prompt-count">
+        {t('settingsSystemPromptCount', { count })}
+      </div>
+    </div>
   )
 }
 

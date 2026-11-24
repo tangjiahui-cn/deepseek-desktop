@@ -19,6 +19,7 @@ English | [简体中文](README.md)
 DeepSeek Desktop is a chat app powered by the DeepSeek API, available as a static web app and as a native desktop app for macOS, Windows, and Linux. There is no application backend: the client connects directly to the API service you configure. Add your API key in **Settings** before your first chat.
 
 - **Local-first:** Settings, conversations, drafts, and original attachments stay on your device; no account required.
+- **Personalized:** Save a custom prompt in Settings to shape answers around the way you write.
 - **Consistent everywhere:** The same React interface runs in the browser and in Electron.
 - **Updates on your terms:** The desktop app never downloads or installs an update without confirmation.
 

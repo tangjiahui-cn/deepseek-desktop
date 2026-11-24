@@ -104,6 +104,19 @@ export const IconDownloadOutline16 = () => (
   </svg>
 )
 
+export const IconPersonalizationOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M6.3 1.5L7.35 4.55L10.4 5.6L7.35 6.65L6.3 9.7L5.25 6.65L2.2 5.6L5.25 4.55L6.3 1.5Z"
+      fill="currentColor"
+    />
+    <path
+      d="M11.9 8.2L12.55 10.15L14.5 10.8L12.55 11.45L11.9 13.4L11.25 11.45L9.3 10.8L11.25 10.15L11.9 8.2Z"
+      fill="currentColor"
+    />
+  </svg>
+)
+
 export const IconEditOutline16 = () => (
   <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path

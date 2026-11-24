@@ -1,6 +1,6 @@
 {
   "name": "chat-demo",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "基于 DeepSeek API 的聊天应用，支持 Web 与 Electron 桌面端。",
   "license": "MIT",
   "private": true,
