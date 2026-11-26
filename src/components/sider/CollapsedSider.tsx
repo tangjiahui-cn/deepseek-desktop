@@ -1,12 +1,18 @@
-import { IconDownloadOutline16, IconPanelLeftOutline16, NewChatIcon } from '../base/icons.js'
+import {
+  IconDownloadOutline16,
+  IconPanelLeftOutline16,
+  IconSettingsOutline16,
+  NewChatIcon,
+} from '../base/icons.js'
 import { useTranslate } from '../../i18n/index.js'
 import { setSiderCollapsed } from '../../services/settings.js'
 import { newChat } from '../../services/chat/store.js'
 import { useDesktopUpdate } from '../../services/desktop/update.js'
 import { IconButton } from '../base/IconButton.js'
+import { openSettings } from '../settings/settingsDialogState.js'
 import styles from './Sider.module.css'
 
-/** 收起后左上角的按钮组 */
+/** 收起后左上角的按钮组：打开边栏、设置、新建对话，有更新时在最右侧追加更新按钮 */
 export const CollapsedSider = () => {
   const t = useTranslate()
   const update = useDesktopUpdate((state) => state.state)
@@ -23,6 +29,13 @@ export const CollapsedSider = () => {
           icon={<IconPanelLeftOutline16 />}
           tooltip={t('expandSiderbarButton')}
           onClick={() => setSiderCollapsed(false)}
+        />
+        <IconButton
+          size="m"
+          tone="primary"
+          icon={<IconSettingsOutline16 />}
+          tooltip={t('settings')}
+          onClick={() => openSettings('general')}
         />
         <IconButton
           size="m"
