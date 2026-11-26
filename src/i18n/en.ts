@@ -100,19 +100,27 @@ export const en = {
   settingsSystemPromptCount: '{count}/{limit}',
   settingsMemoryEnabled: 'Enable memory',
   settingsMemoryDescription:
-    'When enabled, the assistant maintains a long-term profile from new chats and uses it in later conversations. Off by default; updates make an extra model call.',
+    'When enabled, the assistant maintains a long-term memory from new chats and uses it in later conversations. Off by default; updates make an extra model call.',
   settingsMemoryDisabledNotice: 'Memory is off. Your profile is not sent to the model.',
-  settingsMemoryProfile: 'Long-term profile',
-  settingsMemoryProfileHelp: 'This profile is sent with every request, up to 2,000 characters.',
+  settingsMemoryMaxLength: 'Maximum memory length',
+  settingsMemoryMaxLengthDescription:
+    'Set between {min} and {max} characters. The profile is sent with every request, so larger limits cost more.',
+  settingsMemoryMaxLengthInvalid: 'Enter an integer between {min} and {max}.',
+  settingsMemoryRequirements: 'Memory requirements',
+  settingsMemoryRequirementsDescription:
+    'Decides what can be written to memory; saving an empty value restores the six defaults.',
+  settingsMemoryProfile: 'Current memory',
+  settingsMemoryProfileHelp:
+    'This profile is sent with every request, up to {limit} characters.',
   settingsMemoryProfilePlaceholder:
     'No profile yet. Once memory is enabled, new conversations will build it automatically.',
   settingsMemoryProfileCount: '{count}/{limit}',
-  settingsMemoryProfileWarning: 'Approaching the 2,000-character limit; consider trimming it.',
+  settingsMemoryProfileWarning: 'Approaching the {limit}-character limit; consider trimming it.',
   settingsMemoryProfileOverflow:
-    'The profile exceeds 2,000 characters, so automatic updates are paused. Trim it and save.',
-  settingsMemoryUserEdited: 'You edited the profile, so automatic updates are paused.',
-  settingsMemoryResumeAuto: 'Resume automatic updates',
-  settingsMemoryUndo: 'Undo last update',
+    'The profile exceeds {limit} characters; automatic updates will compress it first. You can also trim it manually.',
+  settingsMemoryProfileUpdated:
+    'The profile was updated automatically; saving will overwrite the latest result.',
+  settingsMemoryCompressing: 'Compressing the profile…',
   settingsMemoryLastUpdated: 'Last updated: {title} · {date}',
   settingsMemoryNeverUpdated: 'No automatic update yet',
   settingsMemorySave: 'Save',

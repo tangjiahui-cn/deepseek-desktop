@@ -1,11 +1,7 @@
 import { create } from 'zustand'
-import {
-  MEMORY_PROFILE_MAX,
-  MEMORY_REVISION_LIMIT,
-  normalizeProfileSummary,
-  profileLength,
-} from './prompt.js'
-import type { MemoryCheckpoint, MemoryProfile, MemoryRevision } from './types.js'
+import { useSettings } from '../settings.js'
+import { normalizeProfileSummary, profileLength } from './prompt.js'
+import type { MemoryCheckpoint, MemoryProfile } from './types.js'
 
 const PROFILE_KEY = 'chat-demo:memory-profile'
 const CHECKPOINTS_KEY = 'chat-demo:memory-checkpoints'
@@ -55,36 +51,7 @@ export const emptyProfile = (): MemoryProfile => ({
   updatedAt: 0,
   lastSessionId: '',
   lastSessionTitle: '',
-  userEdited: false,
-  overflow: false,
-  revisions: [],
 })
-
-const parseRevisions = (value: unknown): MemoryRevision[] => {
-  if (!Array.isArray(value)) {
-    return []
-  }
-  const revisions: MemoryRevision[] = []
-  for (const entry of value) {
-    if (!isRecord(entry)) {
-      continue
-    }
-    const summary = normalizeProfileSummary(asString(entry.summary))
-    if (!summary) {
-      continue
-    }
-    revisions.push({
-      summary,
-      updatedAt: asNumber(entry.updatedAt),
-      sessionId: asString(entry.sessionId),
-      sessionTitle: asString(entry.sessionTitle),
-    })
-    if (revisions.length >= MEMORY_REVISION_LIMIT) {
-      break
-    }
-  }
-  return revisions
-}
 
 /** 校验画像；损坏字段回退为空，不在读取时静默截断超长内容。 */
 export const parseProfile = (value: unknown): MemoryProfile => {
@@ -96,17 +63,23 @@ export const parseProfile = (value: unknown): MemoryProfile => {
     updatedAt: asNumber(value.updatedAt),
     lastSessionId: asString(value.lastSessionId),
     lastSessionTitle: asString(value.lastSessionTitle),
-    userEdited: value.userEdited === true,
-    overflow: value.overflow === true,
-    revisions: parseRevisions(value.revisions),
   }
 }
+
+/** 旧画像还带撤销版本或暂停标记；读取后清掉，避免继续占用存储。 */
+const hasLegacyProfileFields = (value: unknown): boolean =>
+  isRecord(value) &&
+  ('revisions' in value || 'userEdited' in value || 'overflow' in value)
 
 /** 旧版条目迁移成一段画像；只在新 key 不存在时执行一次。 */
 const readInitialProfile = (): MemoryProfile => {
   const stored = readJson(PROFILE_KEY)
   if (stored !== null) {
-    return parseProfile(stored)
+    const profile = parseProfile(stored)
+    if (hasLegacyProfileFields(stored)) {
+      writeJson(PROFILE_KEY, profile)
+    }
+    return profile
   }
   const legacy = readJson(LEGACY_ITEMS_KEY)
   if (Array.isArray(legacy)) {
@@ -164,91 +137,41 @@ const saveCheckpoints = (checkpoints: Record<string, MemoryCheckpoint>) => {
   useMemoryStore.setState({ checkpoints })
 }
 
-const pushRevision = (profile: MemoryProfile): MemoryRevision[] => {
-  if (!profile.summary) {
-    return profile.revisions
-  }
-  return [
-    {
-      summary: profile.summary,
-      updatedAt: profile.updatedAt,
-      sessionId: profile.lastSessionId,
-      sessionTitle: profile.lastSessionTitle,
-    },
-    ...profile.revisions,
-  ].slice(0, MEMORY_REVISION_LIMIT)
-}
+const currentMaxLength = (): number => useSettings.getState().memoryMaxLength
 
-/** 自动更新；用户编辑或已因超限暂停时拒绝，调用方应保留旧画像。 */
+/**
+ * 自动更新写入。baseSummary 是发起请求时的画像；期间用户编辑或别的更新先落盘时拒绝，
+ * 由调用方决定是否重新排队。
+ */
 export const applyAutoProfile = (
   summary: string,
   source: { sessionId: string; sessionTitle: string },
+  baseSummary: string,
   now = Date.now()
 ): boolean => {
   const text = normalizeProfileSummary(summary)
   const { profile } = useMemoryStore.getState()
-  if (!text || profile.userEdited || profile.overflow || profileLength(text) > MEMORY_PROFILE_MAX) {
+  if (!text || profile.summary !== baseSummary || profileLength(text) > currentMaxLength()) {
     return false
   }
-  const changed = text !== profile.summary
   saveProfile({
     ...profile,
     summary: text,
     updatedAt: now,
     lastSessionId: source.sessionId,
     lastSessionTitle: source.sessionTitle,
-    revisions: changed ? pushRevision(profile) : profile.revisions,
-    overflow: false,
   })
   return true
 }
 
-/** 用户手动编辑：锁定画像，暂停自动更新，保留旧版本供撤销。 */
+/** 用户手动编辑：直接成为后续自动合并的基线，不暂停自动更新。 */
 export const editProfile = (summary: string, now = Date.now()): boolean => {
   const text = normalizeProfileSummary(summary)
-  if (!text || profileLength(text) > MEMORY_PROFILE_MAX) {
+  if (!text || profileLength(text) > currentMaxLength()) {
     return false
   }
   const { profile } = useMemoryStore.getState()
-  saveProfile({
-    ...profile,
-    summary: text,
-    updatedAt: now,
-    userEdited: true,
-    overflow: false,
-    revisions: text !== profile.summary ? pushRevision(profile) : profile.revisions,
-  })
-  return true
-}
-
-export const resumeAutoUpdate = () => {
-  const { profile } = useMemoryStore.getState()
-  saveProfile({ ...profile, userEdited: false, overflow: false })
-}
-
-/** 自动更新超过硬上限且压缩失败时暂停，直到用户精简或恢复。 */
-export const markProfileOverflow = () => {
-  const { profile } = useMemoryStore.getState()
-  saveProfile({ ...profile, overflow: true })
-}
-
-/** 撤销到上一次画像；撤销本身也算用户操作，暂停自动更新。 */
-export const undoProfile = (): boolean => {
-  const { profile } = useMemoryStore.getState()
-  const [revision, ...rest] = profile.revisions
-  if (!revision) {
-    return false
-  }
-  saveProfile({
-    ...profile,
-    summary: revision.summary,
-    updatedAt: Date.now(),
-    lastSessionId: revision.sessionId,
-    lastSessionTitle: revision.sessionTitle,
-    userEdited: true,
-    overflow: false,
-    revisions: rest,
-  })
+  saveProfile({ ...profile, summary: text, updatedAt: now })
   return true
 }
 

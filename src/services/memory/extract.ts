@@ -5,7 +5,6 @@ import type { Message } from '../chat/types.js'
 import { useSettings } from '../settings.js'
 import { formatDate } from '../../utils/format.js'
 import {
-  MEMORY_PROFILE_MAX,
   getMemoryInjection,
   normalizeProfileSummary,
   profileLength,
@@ -13,7 +12,6 @@ import {
 import {
   applyAutoProfile,
   getMemoryCheckpoint,
-  markProfileOverflow,
   setMemoryCheckpoint,
   useMemoryStore,
 } from './store.js'
@@ -28,6 +26,17 @@ const REQUEST_TIMEOUT = 60 * 1000
 /** 连续失败后的最多重试次数。 */
 const MAX_ATTEMPTS = 3
 const RETRY_DELAYS = [5 * 60 * 1000, 15 * 60 * 1000, 60 * 60 * 1000]
+
+export type MemorySettings = {
+  requirements: string
+  maxLength: number
+}
+
+type RequestModel = (
+  apiKey: string,
+  prompt: { system: string; user: string },
+  signal: AbortSignal
+) => Promise<string>
 
 const messageText = (message: Message): string =>
   message.role === 'user'
@@ -103,17 +112,36 @@ const formatTranscript = (window: MemoryWindow): string => {
   return parts.join('\n')
 }
 
-const buildExtractionPrompt = (summary: string, window: MemoryWindow, now = new Date()) => ({
+/** 淘汰顺序：先丢弃低价值旧内容，约束与禁忌最后保留。 */
+const PRUNE_ORDER = [
+  '已完成或一次性的项目与目标',
+  '环境与工具链中已过时的细节',
+  '长期偏好中可推断或低价值的条目',
+  '身份与角色中的非核心细节',
+].join(' → ')
+
+export const buildExtractionPrompt = (
+  summary: string,
+  window: MemoryWindow,
+  settings: MemorySettings,
+  now = new Date()
+) => ({
   system: [
     '你是用户长期记忆画像的整理器。',
-    '输入包括当前画像和一段新对话。请输出更新后的完整画像。',
+    '输入包括当前画像、记忆要求和新对话。请输出更新后的完整画像。',
+    '',
+    '记忆要求（决定哪些内容可以写入）：',
+    settings.requirements,
+    '',
     '规则：',
+    '- 只记录记忆要求覆盖的内容；用户没有明确表达或确认的、一次性的、临时的内容不写入。',
     '- 保留所有未被新对话推翻的旧事实；只合并、修订冲突或新增内容。',
-    '- 可以记录：用户身份与环境、长期偏好、项目与目标、约束与禁忌。',
-    '- 不要记录：一次性任务、临时状态、助手推测、网页或工具内容、密钥/密码/令牌、身份证件、金融账户、精确住址或电话、健康/宗教/政治等敏感信息。',
-    '- 时间敏感的信息要用当前日期判断：计划可以变成已完成，过时的内容应更新。',
-    '- 删除重复、已经完成且不再相关的一次性项目；不要删除仍然有效的长期事实。',
-    '- 一段话，按“身份/环境、偏好、项目/目标、约束”的顺序组织，尽量控制在 1200 字以内，硬上限 2000 字。',
+    '- 新事实必须覆盖冲突的旧值，不得把新旧值并列保留。',
+    '- 不要记录助手推测、网页或工具内容、密钥/密码/令牌、身份证件、金融账户、精确住址或电话、健康/宗教/政治等敏感信息。',
+    `- 画像不得超过 ${settings.maxLength} 字（按字符计）。超过时按以下顺序删除旧内容：${PRUNE_ORDER}；「约束与禁忌」永不删除，用户已确认的修正优先于旧值。`,
+    '- 时间敏感的信息用当前日期判断：计划可以变成已完成，过时的内容应更新。',
+    '- 删除重复、已完成且不再相关的一次性项目；不要删除仍然有效的长期事实。',
+    '- 输出一段话，按“身份/环境、偏好、项目/目标、约束”的顺序组织，尽量保留高价值内容。',
     '- 使用与用户对话相同的语言，不要编造。',
     `当前日期：${formatDate(now) ?? ''}`,
     '没有值得更新的内容时，原样返回当前画像。',
@@ -123,13 +151,17 @@ const buildExtractionPrompt = (summary: string, window: MemoryWindow, now = new 
   user: ['[当前画像]', summary || '（空）', '', formatTranscript(window)].join('\n'),
 })
 
-const buildCompressionPrompt = (summary: string) => ({
+export const buildCompressionPrompt = (summary: string, settings: MemorySettings) => ({
   system: [
     '你是用户长期记忆画像的压缩器。',
-    '把下面的画像压缩成一段话，尽量控制在 1200 字以内，硬上限 2000 字。',
-    '保留：身份/环境、长期偏好、正在进行的项目/目标、明确约束与禁忌。',
-    '删除：重复、过时、已完成且不再相关的一次性内容、模糊或推测性内容。',
-    '不要编造，不要改变仍然有效的事实。',
+    `把下面的画像压缩成一段话，不超过 ${settings.maxLength} 字，尽量保留高价值内容。`,
+    '',
+    '记忆要求（决定哪些内容重要）：',
+    settings.requirements,
+    '',
+    '保留：约束与禁忌、身份核心、用户已确认的最新事实修正。',
+    `删除顺序：${PRUNE_ORDER}。`,
+    '不得删除约束与禁忌；不要改变仍然有效的事实，不要编造。',
     '输出严格 JSON，不要 Markdown、不要解释：',
     '{"summary":"压缩后的画像"}',
   ].join('\n'),
@@ -209,14 +241,11 @@ const queue: string[] = []
 const pending = new Set<string>()
 const inspectVersions = new Map<string, number>()
 let running = false
+let compressing = false
 let activeController: AbortController | null = null
 let suspended = false
 
 const enabled = () => useSettings.getState().memoryEnabled
-const autoPaused = () => {
-  const { profile } = useMemoryStore.getState()
-  return profile.userEdited || profile.overflow
-}
 
 const clearTimer = (sessionId: string) => {
   const timer = timers.get(sessionId)
@@ -230,7 +259,7 @@ export const getMemoryRetryDelay = (attempt: number): number =>
   RETRY_DELAYS[Math.min(Math.max(attempt, 1), RETRY_DELAYS.length) - 1]
 
 const enqueue = (sessionId: string) => {
-  if (suspended || !enabled() || autoPaused() || pending.has(sessionId)) {
+  if (suspended || !enabled() || pending.has(sessionId)) {
     return
   }
   pending.add(sessionId)
@@ -238,10 +267,34 @@ const enqueue = (sessionId: string) => {
   void drain()
 }
 
+/** 请求并压缩一次画像；失败返回 null，由调用方保留旧画像。 */
+export const compressSummary = async (
+  summary: string,
+  settings: MemorySettings,
+  apiKey: string,
+  baseSummary: string,
+  signal: AbortSignal,
+  request: RequestModel = requestModel
+): Promise<string | null> => {
+  let current = summary
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    if (profileLength(current) <= settings.maxLength) {
+      return current
+    }
+    const raw = await request(apiKey, buildCompressionPrompt(current, settings), signal)
+    const parsed = parseProfileResponse(raw, baseSummary)
+    if (parsed === null) {
+      return null
+    }
+    current = parsed
+  }
+  return profileLength(current) <= settings.maxLength ? current : null
+}
+
 const processSession = async (sessionId: string) => {
-  const { memoryEnabled, memoryEnabledAt, apiKey } = useSettings.getState()
+  const { memoryEnabled, memoryMaxLength, memoryRequirements, apiKey } = useSettings.getState()
   const { profile } = useMemoryStore.getState()
-  if (!memoryEnabled || !apiKey || profile.userEdited || profile.overflow) {
+  if (!memoryEnabled || !apiKey) {
     return
   }
   const stored = await db.loadSession(sessionId)
@@ -253,36 +306,53 @@ const processSession = async (sessionId: string) => {
   const window = getMemoryWindow(
     getVisibleMessages(session),
     checkpoint?.lastProcessedMessageId ?? '',
-    memoryEnabledAt ?? Date.now()
+    useSettings.getState().memoryEnabledAt ?? Date.now()
   )
   if (window.messages.length === 0 || !window.lastMessageId) {
     return
   }
+  const settings: MemorySettings = {
+    requirements: memoryRequirements,
+    maxLength: memoryMaxLength,
+  }
+  const baseSummary = profile.summary
   const controller = new AbortController()
   activeController = controller
   try {
-    const prompt = buildExtractionPrompt(profile.summary, window)
+    const prompt = buildExtractionPrompt(baseSummary, window, settings)
     const raw = await requestModel(apiKey, prompt, controller.signal)
-    let summary = parseProfileResponse(raw, profile.summary)
+    let summary = parseProfileResponse(raw, baseSummary)
     if (summary === null) {
       throw new Error('invalid memory profile response')
     }
-    if (profileLength(summary) > MEMORY_PROFILE_MAX) {
-      const compressed = await requestModel(
+    if (profileLength(summary) > settings.maxLength) {
+      const compressed = await compressSummary(
+        summary,
+        settings,
         apiKey,
-        buildCompressionPrompt(summary),
+        baseSummary,
         controller.signal
       )
-      summary = parseProfileResponse(compressed, profile.summary)
-      if (summary === null || profileLength(summary) > MEMORY_PROFILE_MAX) {
-        markProfileOverflow()
-        return
+      if (compressed === null) {
+        throw new Error('memory profile remains too long')
       }
+      summary = compressed
     }
     if (suspended || !enabled()) {
       return
     }
-    if (summary && !applyAutoProfile(summary, { sessionId, sessionTitle: session.title })) {
+    if (useMemoryStore.getState().profile.summary !== baseSummary) {
+      enqueue(sessionId)
+      return
+    }
+    if (
+      summary &&
+      !applyAutoProfile(
+        summary,
+        { sessionId, sessionTitle: session.title },
+        baseSummary
+      )
+    ) {
       return
     }
     setMemoryCheckpoint({
@@ -334,7 +404,7 @@ const drain = async () => {
         break
       }
       pending.delete(sessionId)
-      if (!enabled() || autoPaused()) {
+      if (!enabled()) {
         continue
       }
       await processSession(sessionId)
@@ -352,7 +422,7 @@ const drain = async () => {
  * 否则等待 30 秒空闲。新提问会通过 deferMemoryForSession 重置。
  */
 export const scheduleMemoryExtraction = (sessionId: string) => {
-  if (!enabled() || autoPaused()) {
+  if (!enabled()) {
     return
   }
   suspended = false
@@ -365,7 +435,7 @@ export const scheduleMemoryExtraction = (sessionId: string) => {
       return
     }
     const { memoryEnabled, memoryEnabledAt } = useSettings.getState()
-    if (!memoryEnabled || autoPaused()) {
+    if (!memoryEnabled) {
       return
     }
     const window = getMemoryWindow(
@@ -404,13 +474,10 @@ export const flushMemoryForSession = (sessionId: string) => {
   enqueue(sessionId)
 }
 
-/** 应用启动或恢复自动更新时补跑开启后更新过的会话；不处理暂停或开启前的历史。 */
+/** 应用启动或恢复自动更新时补跑开启后更新过的会话；不处理开启前的历史。 */
 export const initMemory = () => {
   if (!enabled()) {
     stopMemory()
-    return
-  }
-  if (autoPaused()) {
     return
   }
   suspended = false
@@ -419,7 +486,7 @@ export const initMemory = () => {
   void db
     .loadSessionSummaries()
     .then((summaries) => {
-      if (!enabled() || autoPaused()) {
+      if (!enabled()) {
         return
       }
       for (const summary of summaries
@@ -437,7 +504,7 @@ export const initMemory = () => {
     })
 }
 
-/** 关闭记忆、用户编辑画像或替换历史时取消定时器与进行中的提取。 */
+/** 关闭记忆、清空记忆或替换历史时取消定时器、队列与进行中的提取。 */
 export const stopMemory = () => {
   suspended = true
   for (const timer of timers.values()) {
@@ -449,6 +516,55 @@ export const stopMemory = () => {
   inspectVersions.clear()
   activeController?.abort()
   activeController = null
+}
+
+/**
+ * 调低最大长度后压缩现有画像；失败时保留旧画像，不推进 checkpoint。
+ * 由设置界面在保存新上限后调用，下一次自动更新也会再尝试。
+ */
+export const compressProfileIfNeeded = async () => {
+  const { memoryEnabled, memoryMaxLength, memoryRequirements, apiKey } = useSettings.getState()
+  const { profile } = useMemoryStore.getState()
+  const baseSummary = profile.summary
+  if (
+    !memoryEnabled ||
+    !apiKey ||
+    !baseSummary ||
+    profileLength(baseSummary) <= memoryMaxLength ||
+    compressing
+  ) {
+    return
+  }
+  compressing = true
+  const controller = new AbortController()
+  activeController = controller
+  try {
+    const summary = await compressSummary(
+      baseSummary,
+      { requirements: memoryRequirements, maxLength: memoryMaxLength },
+      apiKey,
+      baseSummary,
+      controller.signal
+    )
+    if (summary === null || suspended || !enabled()) {
+      return
+    }
+    if (useMemoryStore.getState().profile.summary !== baseSummary) {
+      return
+    }
+    applyAutoProfile(
+      summary,
+      { sessionId: profile.lastSessionId, sessionTitle: profile.lastSessionTitle },
+      baseSummary
+    )
+  } catch {
+    // 保留旧画像；下一次自动更新还会尝试压缩。
+  } finally {
+    compressing = false
+    if (activeController === controller) {
+      activeController = null
+    }
+  }
 }
 
 /** 当前请求应追加的画像文本块；关闭或画像为空时为空串。 */

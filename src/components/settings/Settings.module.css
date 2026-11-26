@@ -369,6 +369,38 @@
   gap: 8px;
 }
 
+.memorySettingsRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--dsw-alias-border-l2-darkmode-thin);
+}
+
+.memoryMaxLengthInput {
+  box-sizing: border-box;
+  width: 160px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  background-color: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color var(--ds-transition-duration) var(--ds-ease-in-out);
+
+  &:focus-visible {
+    border-color: var(--dsw-alias-brand-primary);
+  }
+}
+
+.memoryRequirementsInput {
+  min-height: 108px;
+  max-height: 240px;
+}
+
 .error {
   font-size: 12px;
   line-height: 18px;
@@ -515,6 +547,10 @@
 
   .memoryProfileInput {
     min-height: 180px;
+    font-size: 16px;
+  }
+
+  .memoryMaxLengthInput {
     font-size: 16px;
   }
 

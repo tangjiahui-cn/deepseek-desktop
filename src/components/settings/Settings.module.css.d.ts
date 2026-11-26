@@ -36,6 +36,9 @@ declare const styles: {
   readonly "memoryProfileMeta": string;
   readonly "memoryProfileInput": string;
   readonly "memoryProfileActions": string;
+  readonly "memorySettingsRow": string;
+  readonly "memoryMaxLengthInput": string;
+  readonly "memoryRequirementsInput": string;
   readonly "error": string;
   readonly "apiKey": string;
   readonly "apiKeySaved": string;

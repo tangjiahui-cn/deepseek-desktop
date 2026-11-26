@@ -1,45 +1,70 @@
 import clsx from 'clsx'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import { formatDate } from '../../utils/format.js'
+import { clearProfile, editProfile, useMemoryStore } from '../../services/memory/store.js'
 import {
-  clearProfile,
-  editProfile,
-  resumeAutoUpdate,
-  undoProfile,
-  useMemoryStore,
-} from '../../services/memory/store.js'
-import { initMemory, stopMemory } from '../../services/memory/extract.js'
+  compressProfileIfNeeded,
+  initMemory,
+  stopMemory,
+} from '../../services/memory/extract.js'
 import {
-  MEMORY_PROFILE_MAX,
-  MEMORY_PROFILE_TARGET,
+  MEMORY_MAX_LENGTH_LIMIT,
+  MEMORY_MAX_LENGTH_MIN,
   profileLength,
 } from '../../services/memory/prompt.js'
-import { setMemoryEnabled, useSettings } from '../../services/settings.js'
+import {
+  setMemoryEnabled,
+  setMemoryMaxLength,
+  setMemoryRequirements,
+  useSettings,
+} from '../../services/settings.js'
 import { Button } from '../base/Button.js'
 import { Modal } from '../base/Modal.js'
 import { showToast } from '../base/toastState.js'
 import styles from './Settings.module.css'
 
-/** 设置里的长期画像：总开关、画像编辑、撤销、自动更新暂停与清空。 */
+/** 设置里的长期记忆：开关、最大长度、记忆要求和当前记忆编辑。 */
 export const MemoryField = () => {
   const t = useTranslate()
   const locale = useSettings((state) => state.locale)
   const enabled = useSettings((state) => state.memoryEnabled)
+  const maxLength = useSettings((state) => state.memoryMaxLength)
+  const requirements = useSettings((state) => state.memoryRequirements)
   const profile = useMemoryStore((state) => state.profile)
   const [draft, setDraft] = useState(profile.summary)
   const [dirty, setDirty] = useState(false)
+  const [profileChanged, setProfileChanged] = useState(false)
+  const [requirementsDraft, setRequirementsDraft] = useState(requirements)
+  const [requirementsDirty, setRequirementsDirty] = useState(false)
+  const [maxDraft, setMaxDraft] = useState(String(maxLength))
+  const [maxError, setMaxError] = useState(false)
+  const [compressing, setCompressing] = useState(false)
   const [clearOpen, setClearOpen] = useState(false)
+
+  const dirtyRef = useRef(dirty)
+  dirtyRef.current = dirty
+  const lastSummary = useRef(profile.summary)
   const length = profileLength(draft)
-  const overLimit = length > MEMORY_PROFILE_MAX
-  const nearLimit = length >= MEMORY_PROFILE_TARGET + 400
+  const overLimit = length > maxLength
+  const nearLimit = length >= Math.ceil(maxLength * 0.9)
   const updatedAt = profile.updatedAt ? formatDate(profile.updatedAt) : null
 
   useEffect(() => {
-    if (!dirty) {
+    setMaxDraft(String(maxLength))
+  }, [maxLength])
+
+  useEffect(() => {
+    if (profile.summary === lastSummary.current) {
+      return
+    }
+    lastSummary.current = profile.summary
+    if (dirtyRef.current) {
+      setProfileChanged(true)
+    } else {
       setDraft(profile.summary)
     }
-  }, [profile.summary, dirty])
+  }, [profile.summary])
 
   const toggle = () => {
     const next = !enabled
@@ -51,31 +76,53 @@ export const MemoryField = () => {
     }
   }
 
-  const save = () => {
+  const saveMaxLength = () => {
+    const value = Number(maxDraft)
+    if (
+      !Number.isInteger(value) ||
+      value < MEMORY_MAX_LENGTH_MIN ||
+      value > MEMORY_MAX_LENGTH_LIMIT
+    ) {
+      setMaxError(true)
+      setMaxDraft(String(maxLength))
+      return
+    }
+    setMaxError(false)
+    if (value === maxLength) {
+      return
+    }
+    setMemoryMaxLength(value)
+    if (value < profileLength(profile.summary)) {
+      setCompressing(true)
+      void compressProfileIfNeeded().finally(() => setCompressing(false))
+    }
+  }
+
+  const saveRequirements = () => {
+    setMemoryRequirements(requirementsDraft)
+    setRequirementsDraft(useSettings.getState().memoryRequirements)
+    setRequirementsDirty(false)
+  }
+
+  const cancelRequirements = () => {
+    setRequirementsDraft(requirements)
+    setRequirementsDirty(false)
+  }
+
+  const saveProfile = () => {
     if (!draft.trim() || overLimit) {
       return
     }
     if (editProfile(draft)) {
       setDirty(false)
-      stopMemory()
+      setProfileChanged(false)
     }
   }
 
-  const cancel = () => {
+  const cancelProfile = () => {
     setDraft(profile.summary)
     setDirty(false)
-  }
-
-  const resume = () => {
-    resumeAutoUpdate()
-    initMemory()
-  }
-
-  const undo = () => {
-    if (undoProfile()) {
-      setDirty(false)
-      stopMemory()
-    }
+    setProfileChanged(false)
   }
 
   const confirmClear = () => {
@@ -83,6 +130,7 @@ export const MemoryField = () => {
     stopMemory()
     setDraft('')
     setDirty(false)
+    setProfileChanged(false)
     setClearOpen(false)
     showToast({ key: 'settingsMemoryCleared' })
   }
@@ -110,29 +158,87 @@ export const MemoryField = () => {
         {!enabled ? (
           <div className={styles.memoryNotice}>{t('settingsMemoryDisabledNotice')}</div>
         ) : null}
-        {profile.userEdited ? (
-          <div className={styles.memoryPaused}>
-            <span>{t('settingsMemoryUserEdited')}</span>
-            <Button variant="outlined" size="s" onClick={resume}>
-              {t('settingsMemoryResumeAuto')}
-            </Button>
+
+        <div className={styles.memorySettingsRow}>
+          <label className={styles.label} htmlFor="settings-memory-max-length">
+            {t('settingsMemoryMaxLength')}
+          </label>
+          <input
+            id="settings-memory-max-length"
+            className={styles.memoryMaxLengthInput}
+            type="number"
+            min={MEMORY_MAX_LENGTH_MIN}
+            max={MEMORY_MAX_LENGTH_LIMIT}
+            step={100}
+            value={maxDraft}
+            aria-invalid={maxError}
+            onChange={(event) => {
+              setMaxDraft(event.target.value)
+              setMaxError(false)
+            }}
+            onBlur={saveMaxLength}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                saveMaxLength()
+              }
+            }}
+          />
+          <div className={styles.memoryProfileMeta}>
+            {t('settingsMemoryMaxLengthDescription', {
+              min: MEMORY_MAX_LENGTH_MIN,
+              max: MEMORY_MAX_LENGTH_LIMIT,
+            })}
           </div>
-        ) : null}
-        {profile.overflow ? (
-          <div className={styles.memoryPaused}>
-            <span>{t('settingsMemoryProfileOverflow')}</span>
-            <Button variant="outlined" size="s" onClick={resume}>
-              {t('settingsMemoryResumeAuto')}
-            </Button>
+          {maxError ? (
+            <div className={styles.error}>
+              {t('settingsMemoryMaxLengthInvalid', {
+                min: MEMORY_MAX_LENGTH_MIN,
+                max: MEMORY_MAX_LENGTH_LIMIT,
+              })}
+            </div>
+          ) : null}
+        </div>
+
+        <div className={styles.memorySettingsRow}>
+          <div className={styles.memoryProfileHeader}>
+            <label className={styles.label} htmlFor="settings-memory-requirements">
+              {t('settingsMemoryRequirements')}
+            </label>
           </div>
-        ) : null}
+          <textarea
+            id="settings-memory-requirements"
+            className={clsx(styles.memoryProfileInput, styles.memoryRequirementsInput)}
+            value={requirementsDraft}
+            aria-describedby="settings-memory-requirements-help"
+            onChange={(event) => {
+              setRequirementsDraft(event.target.value)
+              setRequirementsDirty(true)
+            }}
+          />
+          <div className={styles.memoryProfileMeta} id="settings-memory-requirements-help">
+            {t('settingsMemoryRequirementsDescription')}
+          </div>
+          <div className={styles.memoryProfileActions}>
+            <Button size="m" disabled={!requirementsDirty} onClick={saveRequirements}>
+              {t('settingsMemorySave')}
+            </Button>
+            {requirementsDirty ? (
+              <Button variant="outlined" size="m" onClick={cancelRequirements}>
+                {t('cancel')}
+              </Button>
+            ) : null}
+          </div>
+        </div>
 
         <div className={styles.memoryProfileHeader}>
           <span className={styles.label}>{t('settingsMemoryProfile')}</span>
           <span className={styles.memoryProfileMeta}>
-            {t('settingsMemoryProfileCount', { count: length, limit: MEMORY_PROFILE_MAX })}
+            {t('settingsMemoryProfileCount', { count: length, limit: maxLength })}
           </span>
         </div>
+        {dirty && profileChanged ? (
+          <div className={styles.memoryNotice}>{t('settingsMemoryProfileUpdated')}</div>
+        ) : null}
         <textarea
           className={styles.memoryProfileInput}
           value={draft}
@@ -142,32 +248,27 @@ export const MemoryField = () => {
           onChange={(event) => {
             setDraft(event.target.value)
             setDirty(true)
+            setProfileChanged(false)
           }}
         />
         <div className={styles.memoryProfileMeta} id="settings-memory-profile-count">
-          {overLimit
-            ? t('settingsMemoryProfileOverflow')
-            : nearLimit
-              ? t('settingsMemoryProfileWarning')
-              : t('settingsMemoryProfileHelp')}
+          {compressing
+            ? t('settingsMemoryCompressing')
+            : overLimit
+              ? t('settingsMemoryProfileOverflow', { limit: maxLength })
+              : nearLimit
+                ? t('settingsMemoryProfileWarning', { limit: maxLength })
+                : t('settingsMemoryProfileHelp', { limit: maxLength })}
         </div>
         <div className={styles.memoryProfileActions}>
-          <Button size="m" disabled={!dirty || !draft.trim() || overLimit} onClick={save}>
+          <Button size="m" disabled={!dirty || !draft.trim() || overLimit} onClick={saveProfile}>
             {t('settingsMemorySave')}
           </Button>
           {dirty ? (
-            <Button variant="outlined" size="m" onClick={cancel}>
+            <Button variant="outlined" size="m" onClick={cancelProfile}>
               {t('cancel')}
             </Button>
           ) : null}
-          <Button
-            variant="outlined"
-            size="m"
-            disabled={profile.revisions.length === 0}
-            onClick={undo}
-          >
-            {t('settingsMemoryUndo')}
-          </Button>
           <Button
             variant="dangerOutlined"
             size="m"

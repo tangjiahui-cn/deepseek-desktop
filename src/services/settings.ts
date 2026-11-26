@@ -2,13 +2,18 @@ import { create } from 'zustand'
 import type { TtsVoice } from './api/speech.js'
 import { clampSystemPrompt } from './chat/systemPrompt.js'
 import { normalizeLocation, type UserLocation } from './location.js'
+import {
+  MEMORY_MAX_LENGTH_DEFAULT,
+  clampMemoryMaxLength,
+  normalizeMemoryRequirements,
+} from './memory/prompt.js'
 
 export type Locale = 'zh-CN' | 'en-US'
 
 /** 主题偏好；默认跟随系统 */
 export type ThemePreference = 'light' | 'dark' | 'system'
 
-/** 本机设置，存 localStorage：API Key、语言、主题、位置、朗读音色、自定义提示词、记忆开关、深度思考与智能搜索开关、侧边栏收起状态 */
+/** 本机设置，存 localStorage：API Key、语言、主题、位置、朗读音色、自定义提示词、记忆开关与记忆设置、深度思考与智能搜索开关、侧边栏收起状态 */
 type Settings = {
   apiKey: string | null
   locale: Locale
@@ -18,6 +23,8 @@ type Settings = {
   systemPrompt: string
   memoryEnabled: boolean
   memoryEnabledAt: number | null
+  memoryMaxLength: number
+  memoryRequirements: string
   thinking: boolean
   search: boolean
   siderCollapsed: boolean
@@ -32,6 +39,8 @@ const KEYS = {
   systemPrompt: 'chat-demo:system-prompt',
   memoryEnabled: 'chat-demo:memory-enabled',
   memoryEnabledAt: 'chat-demo:memory-enabled-at',
+  memoryMaxLength: 'chat-demo:memory-max-length',
+  memoryRequirements: 'chat-demo:memory-requirements',
   thinking: 'chat-demo:thinking',
   search: 'chat-demo:search',
   siderCollapsed: 'chat-demo:sider-collapsed',
@@ -99,6 +108,14 @@ const initialSystemPrompt = (): string => clampSystemPrompt(read(KEYS.systemProm
 
 const initialMemoryEnabled = (): boolean => read(KEYS.memoryEnabled) === 'true'
 
+/** 旧数据缺少长度或数值非法时回退默认值，避免超长内容绕过限制。 */
+const initialMemoryMaxLength = (): number =>
+  clampMemoryMaxLength(Number(read(KEYS.memoryMaxLength) ?? MEMORY_MAX_LENGTH_DEFAULT))
+
+/** 记忆要求为空或缺失时使用默认六类。 */
+const initialMemoryRequirements = (): string =>
+  normalizeMemoryRequirements(read(KEYS.memoryRequirements) ?? '')
+
 /** 开启记忆时必须有一个启用时间；旧数据缺少时间时按当前时间处理，避免误处理旧历史。 */
 const initialMemoryEnabledAt = (): number | null => {
   const value = Number(read(KEYS.memoryEnabledAt))
@@ -116,6 +133,8 @@ export const useSettings = create<Settings>(() => {
     systemPrompt: initialSystemPrompt(),
     memoryEnabled,
     memoryEnabledAt: memoryEnabled ? (initialMemoryEnabledAt() ?? Date.now()) : null,
+    memoryMaxLength: initialMemoryMaxLength(),
+    memoryRequirements: initialMemoryRequirements(),
     thinking: read(KEYS.thinking) === 'true',
     search: read(KEYS.search) === 'true',
     siderCollapsed: read(KEYS.siderCollapsed) === 'true',
@@ -158,6 +177,20 @@ export const setMemoryEnabled = (memoryEnabled: boolean) => {
     write(KEYS.memoryEnabledAt, String(memoryEnabledAt))
   }
   useSettings.setState({ memoryEnabled, memoryEnabledAt })
+}
+
+/** 保存最大记忆长度；超出 2000–20000 的值会被夹到边界。 */
+export const setMemoryMaxLength = (value: number) => {
+  const memoryMaxLength = clampMemoryMaxLength(value)
+  write(KEYS.memoryMaxLength, String(memoryMaxLength))
+  useSettings.setState({ memoryMaxLength })
+}
+
+/** 保存记忆要求；空内容恢复默认六类。 */
+export const setMemoryRequirements = (value: string) => {
+  const memoryRequirements = normalizeMemoryRequirements(value)
+  write(KEYS.memoryRequirements, memoryRequirements)
+  useSettings.setState({ memoryRequirements })
 }
 
 export const setApiKey = (apiKey: string | null) => {
