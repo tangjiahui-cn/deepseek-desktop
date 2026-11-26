@@ -1,10 +1,10 @@
-# Spec Delta
+# version-info Specification
 
 ## Purpose
 
-在设置中展示应用版本、运行平台与桌面运行时版本，并提供手动检查更新入口，复用现有桌面更新流程，让用户不必寻找系统菜单。
+在设置中展示应用版本、运行平台与桌面运行时版本，并在进入分组时自动查询一次新版本，复用现有桌面更新流程，让用户不必寻找系统菜单。
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 版本信息分组
 
