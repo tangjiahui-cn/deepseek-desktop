@@ -29,6 +29,14 @@ DeepSeek Desktop 是基于 DeepSeek API 的聊天应用：同一套 React 界面
 6. **不提交生成物**：`node_modules/`、`dist/`、`electron/dist/`、`release/`、`tmp/`、`.cache/` 均已在忽略列表。
 7. **提交与推送需明确指令**：用户未要求时不要 `git commit` 或 `git push`；提交信息沿用仓库的 conventional commits 风格（如 `feat: ...`、`chore: ...`）。
 
+## 版本与发布
+
+- 版本号 SHALL 遵循 SemVer 2.0.0：不兼容变更升 MAJOR，向后兼容的新功能升 MINOR，向后兼容的修复升 PATCH。
+- 当前处于 0.x：新功能与不兼容调整升 MINOR（如 `0.2.0 → 0.3.0`），修复升 PATCH（如 `0.2.0 → 0.2.1`）；升级到 1.0 后，不兼容变更才升 MAJOR。
+- 发布时 `package.json` 的 `version` 必须与 Git tag 完全一致：tag 形如 `v<version>`，例如 `package.json` 为 `0.2.0` 时 tag 必须是 `v0.2.0`。
+- 发布流程：更新 `package.json` → 提交 → 打 tag → 推送 `main` 与 tag；tag 会触发 release workflow，tag 与 `version` 不一致会导致校验失败。
+- 已推送的版本 tag 不得移动、删除或复用；需要修正时发布新的补丁版本。
+
 ## 代码约定
 
 - TypeScript ESM；相对导入带 `.js` 后缀（rspack 的 extensionAlias 会映射到 `.ts` / `.tsx`）。
