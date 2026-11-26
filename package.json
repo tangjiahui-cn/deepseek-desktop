@@ -1,5 +1,5 @@
 {
-  "name": "chat-demo",
+  "name": "deepseek-desktop",
   "version": "0.2.0",
   "description": "基于 DeepSeek API 的聊天应用，支持 Web 与 Electron 桌面端。",
   "license": "MIT",
