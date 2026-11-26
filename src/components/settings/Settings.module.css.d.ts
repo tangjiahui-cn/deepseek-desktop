@@ -39,6 +39,15 @@ declare const styles: {
   readonly "memorySettingsRow": string;
   readonly "memoryMaxLengthInput": string;
   readonly "memoryRequirementsInput": string;
+  readonly "version": string;
+  readonly "versionInfo": string;
+  readonly "versionRow": string;
+  readonly "versionName": string;
+  readonly "versionValue": string;
+  readonly "versionAction": string;
+  readonly "versionActionLabel": string;
+  readonly "versionActionStatus": string;
+  readonly "versionActionButton": string;
   readonly "error": string;
   readonly "apiKey": string;
   readonly "apiKeySaved": string;

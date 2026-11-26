@@ -164,6 +164,14 @@ export const IconFollowsystemOutline16 = () => (
   </svg>
 )
 
+export const IconInfoOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="8" cy="8" r="6.4" stroke="currentColor" strokeWidth="1.2" />
+    <path d="M8 7.1V11.2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    <circle cx="8" cy="5" r="0.8" fill="currentColor" />
+  </svg>
+)
+
 export const IconLightOutline16 = () => (
   <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path
