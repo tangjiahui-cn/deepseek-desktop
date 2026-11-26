@@ -28,6 +28,11 @@
       }
     }
   }
+
+  /* 菜单展开时鼠标可能已经移到浮层上，按钮仍需留在原位作为定位锚点 */
+  &.menuOpen .action {
+    display: flex;
+  }
 }
 
 .title {

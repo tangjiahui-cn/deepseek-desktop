@@ -98,6 +98,8 @@ export const useAnchoredPosition = <T extends HTMLElement, F extends HTMLElement
   const anchorRef = useRef<T | null>(null) as MutableRefObject<T | null>
   const floatingRef = useRef<F | null>(null) as MutableRefObject<F | null>
   const [position, setPosition] = useState<AnchoredPosition | null>(null)
+  /** 触发元素最近一次有效矩形，用于它在打开期间被隐藏时继续定位 */
+  const lastRectRef = useRef<DOMRect | null>(null)
 
   /** 位置没有实际变化时不更新状态，避免重新测量引起多余渲染 */
   const applyPosition = useCallback((next: AnchoredPosition) => {
@@ -128,7 +130,19 @@ export const useAnchoredPosition = <T extends HTMLElement, F extends HTMLElement
     if (!anchor || !floating) {
       return
     }
-    const rect = anchor.getBoundingClientRect()
+    const measured = anchor.getBoundingClientRect()
+    /*
+     * 打开期间触发元素可能被隐藏（例如只在悬停时出现的按钮）。此时 rect 全为 0，
+     * 直接按它摆放会把浮层甩到视口左上角，所以沿用隐藏前的矩形，保持浮层不动。
+     */
+    const hidden = measured.width === 0 && measured.height === 0
+    const rect = hidden ? lastRectRef.current : measured
+    if (!rect) {
+      return
+    }
+    if (!hidden) {
+      lastRectRef.current = measured
+    }
     const spaceAbove = rect.top - offset - VIEWPORT_PADDING
     const spaceBelow = window.innerHeight - rect.bottom - offset - VIEWPORT_PADDING
 
@@ -193,6 +207,7 @@ export const useAnchoredPosition = <T extends HTMLElement, F extends HTMLElement
   useEffect(() => {
     if (!open) {
       setPosition(null)
+      lastRectRef.current = null
     }
   }, [open])
 
