@@ -27,7 +27,8 @@ DeepSeek Desktop 是基于 DeepSeek API 的聊天应用：同一套 React 界面
 4. **证据与临时脚本不提交**：截图、验证脚本放在 `tmp/evidence/` 或 `tmp/` 下（`tmp/` 已被忽略），只供临时查看；禁止提交，禁止 `git add -f`。若要放到其他目录，先把该目录加入 `.gitignore`。
 5. **不改无关文件**：只触碰任务相关代码；不顺手重构、不格式化全仓、不改生成物。
 6. **不提交生成物**：`node_modules/`、`dist/`、`electron/dist/`、`release/`、`tmp/`、`.cache/` 均已在忽略列表。
-7. **提交与推送需明确指令**：用户未要求时不要 `git commit` 或 `git push`；提交信息沿用仓库的 conventional commits 风格（如 `feat: ...`、`chore: ...`）。
+7. **OpenSpec 变更完成后自动交付**：本次需求使用 OpenSpec 且变更任务全部完成、验证通过后，完成实现即依次执行：归档变更并同步主规格 → 按「版本与发布」升版本号 → 提交 → 推送 `main` → 打 `v<version>` tag → 推送 tag 触发发布；无需用户再次要求提交、推送或发布。用户明确要求暂不发布时除外。
+8. **其他改动仍需明确指令**：未使用 OpenSpec，或变更尚未完成、验证未通过时，用户未要求不要 `git commit` 或 `git push`；提交信息沿用仓库的 conventional commits 风格（如 `feat: ...`、`chore: ...`）。
 
 ## 版本与发布
 
