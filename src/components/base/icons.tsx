@@ -297,6 +297,21 @@ export const IconBookmarkFill16 = () => (
   </svg>
 )
 
+/** 分叉到新对话：主干下接一个分向右上的分支节点。 */
+export const IconBranchOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M4.4 4.1v9.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    <circle cx="4.4" cy="2.4" r="1.7" stroke="currentColor" strokeWidth="1.3" />
+    <circle cx="11.6" cy="6.2" r="1.7" stroke="currentColor" strokeWidth="1.3" />
+    <path
+      d="M11.6 7.9v1.3a2.4 2.4 0 0 1-2.4 2.4H4.4"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+    />
+  </svg>
+)
+
 export const IconPaperclipOutline16 = () => (
   <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path

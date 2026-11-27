@@ -50,6 +50,8 @@ export const zh = {
   bookmarkTimeHoursAgo: '{count} 小时前',
   bookmarkTimeYesterday: '昨天',
   bookmarkTimeDaysAgo: '{count} 天前',
+  forkToNewChat: '分叉到新对话',
+  forkedToNewChat: '已分叉到新对话',
   send: '发送',
   editMessage: '编辑消息',
   regenerate: '重新生成',

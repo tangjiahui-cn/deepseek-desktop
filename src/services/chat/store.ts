@@ -12,7 +12,11 @@ import {
   scheduleMemoryExtraction,
   stopMemory,
 } from '../memory/extract.js'
-import { clearMemoryCheckpoints, forgetMemoryCheckpoint } from '../memory/store.js'
+import {
+  clearMemoryCheckpoints,
+  forgetMemoryCheckpoint,
+  setMemoryCheckpoint,
+} from '../memory/store.js'
 import { useSettings } from '../settings.js'
 import {
   initBookmarks,
@@ -30,6 +34,7 @@ import {
   revealMessage,
   selectVersion,
 } from './branches.js'
+import { forkSessionAt } from './fork.js'
 import { useMessageJump } from './jump.js'
 import * as db from './db.js'
 import {
@@ -499,6 +504,53 @@ export const selectSession = (id: string) => {
     void ensureSessionLoaded(id)
     trimSessionCache()
   }
+}
+
+/**
+ * 分叉：把当前可见路径复制到指定回答为止，生成独立会话并切换过去。
+ * 新会话用新消息标识，附件沿用同一份本机原件；原会话不做任何修改。
+ */
+export const forkSession = (sessionId: string, messageId: string): boolean => {
+  if (get().importingHistory || deletingSessions.has(sessionId) || getStreamController(sessionId)) {
+    return false
+  }
+  const source = getSession(sessionId)
+  if (!source) {
+    return false
+  }
+  const forked = forkSessionAt(source, messageId)
+  if (!forked) {
+    return false
+  }
+  const previous = get().activeId
+  if (previous && previous !== forked.id) {
+    flushMemoryForSession(previous)
+  }
+  // 源会话还有未落盘的原件时先补写，新会话的附件引用才有原件可读。
+  const files = pendingFiles.get(sessionId)
+  if (files) {
+    void db.saveFiles(files).catch(db.reportStorageError('copy files for fork'))
+  }
+  touchSession(forked.id)
+  set((state) => ({
+    sessions: sortSessions([toSessionSummary(forked), ...state.sessions]),
+    sessionCache: { ...state.sessionCache, [forked.id]: forked },
+    activeId: forked.id,
+  }))
+  persist(forked.id)
+  const last = forked.messages.at(-1)
+  if (last) {
+    // 复制过来的内容视为已在原会话处理过，记忆只处理分叉之后新增的消息。
+    setMemoryCheckpoint({
+      sessionId: forked.id,
+      lastProcessedMessageId: last.id,
+      lastProcessedAt: Date.now(),
+      status: 'idle',
+      attempts: 0,
+    })
+  }
+  trimSessionCache()
+  return true
 }
 
 export type OpenBookmarkResult = 'opened' | 'missing' | 'busy' | 'failed'

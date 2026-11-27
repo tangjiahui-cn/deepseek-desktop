@@ -54,6 +54,8 @@ export const en = {
   bookmarkTimeHoursAgo: '{count} hr ago',
   bookmarkTimeYesterday: 'Yesterday',
   bookmarkTimeDaysAgo: '{count} days ago',
+  forkToNewChat: 'Fork to new chat',
+  forkedToNewChat: 'Forked into a new chat',
   send: 'Send',
   editMessage: 'Edit message',
   regenerate: 'Regenerate',

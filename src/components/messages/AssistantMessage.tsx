@@ -4,12 +4,13 @@ import { memo, useState } from 'react'
 import {
   IconBookmarkFill16,
   IconBookmarkOutline16,
+  IconBranchOutline16,
   IconRefreshOutline16,
   IconWarningOutline16,
 } from '../base/icons.js'
 import { describeReply } from '../../services/chat/describe.js'
 import { canContinueReply } from '../../services/chat/reply.js'
-import { continueReply, regenerateReply } from '../../services/chat/store.js'
+import { continueReply, forkSession, regenerateReply } from '../../services/chat/store.js'
 import { stopReadAloud } from '../../services/speech/readAloud.js'
 import type { AssistantMessage as AssistantMessageType } from '../../services/chat/types.js'
 import { openSettings } from '../settings/settingsDialogState.js'
@@ -180,6 +181,20 @@ export const AssistantMessage = memo(function AssistantMessage({
                     showToast({ key: 'bookmarkSaveFailed', type: 'error' })
                   } finally {
                     setBookmarking(false)
+                  }
+                }}
+              />
+            ) : null}
+            {responseText && !refused ? (
+              <IconButton
+                icon={<IconBranchOutline16 />}
+                tooltip={t('forkToNewChat')}
+                tooltipPlacement="bottom"
+                disabled={busy}
+                onClick={() => {
+                  stopReadAloud()
+                  if (forkSession(sessionId, message.id)) {
+                    showToast({ key: 'forkedToNewChat' })
                   }
                 }}
               />
