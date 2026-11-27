@@ -265,6 +265,18 @@ export const IconStarFill16 = () => (
   </svg>
 )
 
+export const IconStarDashed16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M8 1.9L9.79 5.53L13.8 6.12L10.9 8.95L11.58 12.94L8 11.06L4.42 12.94L5.1 8.95L2.2 6.12L6.21 5.53L8 1.9Z"
+      stroke="currentColor"
+      strokeWidth="1.35"
+      strokeLinejoin="round"
+      strokeDasharray="2.4 2.2"
+    />
+  </svg>
+)
+
 export const IconPaperclipOutline16 = () => (
   <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path

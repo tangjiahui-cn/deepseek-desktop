@@ -17,7 +17,8 @@
 
 .title {
   max-width: 480px;
-  padding: 8px 12px;
+  min-width: 0;
+  padding: 8px 0 8px 12px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -28,6 +29,32 @@
 .withCollapsedSider {
   /* 避让左上角三按钮胶囊（左 16px + 约 112px 宽），与胶囊保持改动前约 39px 的间隔 */
   margin-left: 149px;
+}
+
+/* 标题右侧收藏切换：28px 命中区 + 6px 内边距，与标题文字视觉间距 32px */
+.favorite {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin-left: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--dsw-specific-favorite-star);
+  cursor: pointer;
+  outline: none;
+
+  &:hover {
+    background-color: var(--dsw-alias-interactive-bg-hover);
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 2px var(--dsw-alias-button-primary-fill);
+  }
 }
 
 .inputContainer {

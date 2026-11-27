@@ -64,6 +64,11 @@ export const SessionItem = memo(function SessionItem({
         closeMobileSider()
       }}
     >
+      {session.favorite ? (
+        <span className={styles.favoriteStar} aria-hidden="true">
+          <IconStarFill16 />
+        </span>
+      ) : null}
       <div className={styles.title}>{displayTitle}</div>
       <div className={styles.action} onClick={(event) => event.stopPropagation()}>
         <Menu
@@ -82,7 +87,7 @@ export const SessionItem = memo(function SessionItem({
                   ? 'sessionItemMenuUnfavoriteOption'
                   : 'sessionItemMenuFavoriteOption'
               ),
-              icon: session.favorite ? <IconStarFill16 /> : <IconStarOutline16 />,
+              icon: <IconStarOutline16 />,
               onSelect: () => {
                 const favorite = !session.favorite
                 setSessionFavorite(session.id, favorite)
