@@ -137,3 +137,12 @@
     --search-row-site-logo-color: var(--dsw-alias-interactive-bg-hover);
   }
 }
+
+/* 已收藏的回答：书签按钮使用品牌色实心图标 */
+.message .bookmarked {
+  color: var(--dsw-alias-brand-primary);
+}
+
+.message .bookmarked:hover {
+  color: var(--dsw-alias-brand-primary);
+}

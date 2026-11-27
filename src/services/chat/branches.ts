@@ -100,6 +100,41 @@ export const appendBranch = (
   }
 }
 
+/** 展开从根到目标消息的分支；目标不可见时逐级修正祖先的 selectedChildId。 */
+export const revealMessage = (original: Session, messageId: string): Session => {
+  const session = normalizeSession(original)
+  const byId = new Map(session.messages.map((message) => [message.id, message]))
+  const target = byId.get(messageId)
+  if (!target) {
+    return original
+  }
+  const chain: Message[] = []
+  let current: Message | undefined = target
+  while (current) {
+    chain.unshift(current)
+    current = current.parentId ? byId.get(current.parentId) : undefined
+  }
+  // 目标不在以根节点开始的树上，无法通过选择分支展示。
+  if (chain[0].parentId !== null) {
+    return original
+  }
+  if (getVisibleMessages(session).some((message) => message.id === messageId)) {
+    return original
+  }
+  let messages = session.messages
+  for (let index = 0; index < chain.length - 1; index += 1) {
+    const parent = chain[index]
+    const child = chain[index + 1]
+    if (parent.selectedChildId === child.id) {
+      continue
+    }
+    messages = messages.map((message) =>
+      message.id === parent.id ? { ...message, selectedChildId: child.id } : message
+    )
+  }
+  return messages === session.messages ? original : { ...session, messages }
+}
+
 /** 仅允许切换当前路径上某一节点的兄弟版本，恢复该版本已选中的后续分支。 */
 export const selectVersion = (original: Session, messageId: string): Session => {
   const session = normalizeSession(original)

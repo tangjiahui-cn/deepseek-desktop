@@ -277,6 +277,26 @@ export const IconStarDashed16 = () => (
   </svg>
 )
 
+export const IconBookmarkOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M3.5 3.25A1.25 1.25 0 0 1 4.75 2h6.5A1.25 1.25 0 0 1 12.5 3.25v10.2c0 .53-.598.846-1.03.545L8 11.4l-3.47 2.595A.65.65 0 0 1 3.5 13.45V3.25Z"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinejoin="round"
+    />
+  </svg>
+)
+
+export const IconBookmarkFill16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M3.5 3.25A1.25 1.25 0 0 1 4.75 2h6.5A1.25 1.25 0 0 1 12.5 3.25v10.2c0 .53-.598.846-1.03.545L8 11.4l-3.47 2.595A.65.65 0 0 1 3.5 13.45V3.25Z"
+      fill="currentColor"
+    />
+  </svg>
+)
+
 export const IconPaperclipOutline16 = () => (
   <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path

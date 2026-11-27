@@ -1,26 +1,29 @@
 declare const styles: {
-  readonly "sider": string;
-  readonly "top": string;
-  readonly "appName": string;
-  readonly "newChat": string;
-  readonly "newChatIcon": string;
-  readonly "tabs": string;
-  readonly "tab": string;
-  readonly "tabActive": string;
-  readonly "listWrap": string;
-  readonly "list": string;
-  readonly "empty": string;
-  readonly "section": string;
-  readonly "sectionHeader": string;
-  readonly "bottom": string;
-  readonly "settings": string;
-  readonly "settingsIcon": string;
-  readonly "settingsLabel": string;
-  readonly "collapsed": string;
-  readonly "collapsedGroup": string;
-  readonly "drawer": string;
-  readonly "drawerMask": string;
-  readonly "mobile": string;
-};
-export = styles;
-
+  readonly sider: string
+  readonly top: string
+  readonly appName: string
+  readonly newChat: string
+  readonly newChatIcon: string
+  readonly tabs: string
+  readonly tab: string
+  readonly tabActive: string
+  readonly listWrap: string
+  readonly list: string
+  readonly empty: string
+  readonly section: string
+  readonly sectionHeader: string
+  readonly bookmarkEmpty: string
+  readonly bookmarkEmptyIcon: string
+  readonly bookmarkEmptyTitle: string
+  readonly bookmarkEmptyHint: string
+  readonly bottom: string
+  readonly settings: string
+  readonly settingsIcon: string
+  readonly settingsLabel: string
+  readonly collapsed: string
+  readonly collapsedGroup: string
+  readonly drawer: string
+  readonly drawerMask: string
+  readonly mobile: string
+}
+export = styles

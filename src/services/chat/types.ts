@@ -123,6 +123,14 @@ export type SessionSummary = Pick<Session, 'id' | 'title' | 'createdAt' | 'updat
   favorite: boolean
 }
 
+/** 回答级书签；仅保存在本机，不进入历史导出。 */
+export type Bookmark = {
+  messageId: string
+  sessionId: string
+  excerpt: string
+  createdAt: number
+}
+
 /** 显式提取字段，避免将完整会话的消息带进列表；缺省收藏标记归一化为未收藏。 */
 export const toSessionSummary = (
   session: Pick<Session, 'id' | 'title' | 'createdAt' | 'updatedAt' | 'favorite'>

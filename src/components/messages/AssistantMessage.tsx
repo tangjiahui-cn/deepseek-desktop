@@ -1,15 +1,22 @@
 import { useTranslate } from '../../i18n/index.js'
 import clsx from 'clsx'
-import { memo } from 'react'
-import { IconRefreshOutline16, IconWarningOutline16 } from '../base/icons.js'
+import { memo, useState } from 'react'
+import {
+  IconBookmarkFill16,
+  IconBookmarkOutline16,
+  IconRefreshOutline16,
+  IconWarningOutline16,
+} from '../base/icons.js'
 import { describeReply } from '../../services/chat/describe.js'
 import { canContinueReply } from '../../services/chat/reply.js'
 import { continueReply, regenerateReply } from '../../services/chat/store.js'
 import { stopReadAloud } from '../../services/speech/readAloud.js'
 import type { AssistantMessage as AssistantMessageType } from '../../services/chat/types.js'
 import { openSettings } from '../settings/settingsDialogState.js'
+import { toBookmarkExcerpt, toggleBookmark, useBookmarks } from '../../services/bookmarks.js'
 import { IconButton } from '../base/IconButton.js'
 import { Button } from '../base/Button.js'
+import { showToast } from '../base/toastState.js'
 import { Markdown } from '../markdown/Markdown.js'
 import { SiteThumbnails } from '../search/SiteLogo.js'
 import { toggleSearchPanel, useSearchPanel } from '../search/searchPanelState.js'
@@ -46,10 +53,13 @@ export const AssistantMessage = memo(function AssistantMessage({
   const t = useTranslate()
   const view = useReplyView(message, streaming)
   const panelEntry = useSearchPanel((state) => state.entry)
+  const bookmarked = useBookmarks((state) => Object.hasOwn(state.byMessageId, message.id))
+  const [bookmarking, setBookmarking] = useState(false)
   const notice = streaming ? null : describeReply(message)
   // 安全拒绝：已下发的思考与正文按协议丢弃，只显示模板答复。
   const refused = message.stopReason === 'refusal'
   const answer = refused ? null : view.answer
+  const bookmarkExcerpt = answer?.text ? toBookmarkExcerpt(answer.text) : ''
   const responseText = [answer?.text, notice?.presentation === 'response' ? notice.text : null]
     .filter(Boolean)
     .join('\n\n')
@@ -57,7 +67,7 @@ export const AssistantMessage = memo(function AssistantMessage({
   const waiting = streaming && view.steps.length === 0 && !view.answer && !message.thinking
   const summaryEntry = `${message.id}-summary`
   return (
-    <div className={styles.message}>
+    <div className={styles.message} data-message-id={message.id}>
       {refused ? null : (
         <ReplyArea
           message={message}
@@ -145,6 +155,34 @@ export const AssistantMessage = memo(function AssistantMessage({
             {copyText ? <CopyButton text={copyText} /> : null}
             {responseText && !refused ? (
               <ReadAloudButton messageId={message.id} text={responseText} />
+            ) : null}
+            {bookmarkExcerpt ? (
+              <IconButton
+                icon={bookmarked ? <IconBookmarkFill16 /> : <IconBookmarkOutline16 />}
+                tooltip={t(bookmarked ? 'bookmarkRemove' : 'bookmarkAdd')}
+                tooltipPlacement="bottom"
+                aria-pressed={bookmarked}
+                disabled={bookmarking}
+                className={clsx(bookmarked && styles.bookmarked)}
+                onClick={async () => {
+                  if (bookmarking) {
+                    return
+                  }
+                  setBookmarking(true)
+                  try {
+                    const added = await toggleBookmark({
+                      messageId: message.id,
+                      sessionId,
+                      excerpt: bookmarkExcerpt,
+                    })
+                    showToast({ key: added ? 'bookmarkAdded' : 'bookmarkRemoved' })
+                  } catch {
+                    showToast({ key: 'bookmarkSaveFailed', type: 'error' })
+                  } finally {
+                    setBookmarking(false)
+                  }
+                }}
+              />
             ) : null}
             <IconButton
               icon={<IconRefreshOutline16 />}

@@ -6,6 +6,7 @@ import {
   type MessageVersions,
 } from '../../services/chat/branches.js'
 import { selectMessageVersion } from '../../services/chat/store.js'
+import { useMessageJump } from '../../services/chat/jump.js'
 import type { Session } from '../../services/chat/types.js'
 import { closeSearchPanel } from '../search/searchPanelState.js'
 import { AssistantMessage } from './AssistantMessage.js'
@@ -60,6 +61,8 @@ export const MessageList = ({
     setPreviousVersions(versions)
   }
   const lastMessageId = messages.at(-1)?.id
+  const jump = useMessageJump((state) => state.target)
+  const clearJump = useMessageJump((state) => state.clear)
   const scrollToBottom = useCallback(() => {
     const el = scrollRef.current
     if (el && stickyRef.current) {
@@ -98,6 +101,32 @@ export const MessageList = ({
     stickyRef.current = true
     scrollToBottom()
   }, [session.id, lastMessageId, scrollToBottom])
+
+  // 书签定位：只把目标回答的开头带到消息区域顶部，不添加高亮或选中态。
+  useLayoutEffect(() => {
+    if (!jump || jump.sessionId !== session.id) {
+      return
+    }
+    const scroll = scrollRef.current
+    if (!scroll) {
+      return
+    }
+    const target = scroll.querySelector<HTMLElement>(
+      `[data-message-id="${CSS.escape(jump.messageId)}"]`
+    )
+    if (!target) {
+      return
+    }
+    stickyRef.current = false
+    const top =
+      target.getBoundingClientRect().top -
+      scroll.getBoundingClientRect().top +
+      scroll.scrollTop -
+      16
+    scroll.scrollTop = Math.max(0, top)
+    scrollTopRef.current = scroll.scrollTop
+    clearJump(jump.nonce)
+  }, [jump, session.id, messages, isMobile, clearJump])
 
   useEffect(closeSearchPanel, [session.id, lastMessageId])
 

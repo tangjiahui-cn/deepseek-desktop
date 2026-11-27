@@ -14,7 +14,23 @@ import {
 } from '../memory/extract.js'
 import { clearMemoryCheckpoints, forgetMemoryCheckpoint } from '../memory/store.js'
 import { useSettings } from '../settings.js'
-import { appendBranch, getVisibleMessages, normalizeSession, selectVersion } from './branches.js'
+import {
+  initBookmarks,
+  refreshBookmarkExcerpt,
+  removeBookmark,
+  removeBookmarksForSession,
+  resetBookmarkState,
+  replyToBookmarkExcerpt,
+  useBookmarks,
+} from '../bookmarks.js'
+import {
+  appendBranch,
+  getVisibleMessages,
+  normalizeSession,
+  revealMessage,
+  selectVersion,
+} from './branches.js'
+import { useMessageJump } from './jump.js'
 import * as db from './db.js'
 import {
   clearAllDrafts,
@@ -316,6 +332,7 @@ export const initChat = (): Promise<void> => {
   initTask = (async () => {
     try {
       const summaries = await db.loadSessionSummaries()
+      await initBookmarks(new Set(summaries.map((session) => session.id)))
       if (epoch === historyEpoch) {
         set({ ready: true, sessions: sortSessions(summaries) })
         void initMemory()
@@ -445,6 +462,7 @@ export const replaceHistory = async (write: () => Promise<void>): Promise<number
       sessionSaveErrors: {},
       activeId: null,
     })
+    resetBookmarkState()
     return summaries.length
   } finally {
     set({ importingHistory: false })
@@ -481,6 +499,49 @@ export const selectSession = (id: string) => {
     void ensureSessionLoaded(id)
     trimSessionCache()
   }
+}
+
+export type OpenBookmarkResult = 'opened' | 'missing' | 'busy' | 'failed'
+
+/**
+ * 从书签定位到目标回答。先加载并校验会话，避免目标缺失或生成中时把用户
+ * 切到一个无法展示回答的会话；目标在隐藏分支时先展开分支再切换。
+ */
+export const openBookmark = async (
+  sessionId: string,
+  messageId: string
+): Promise<OpenBookmarkResult> => {
+  if (get().importingHistory) {
+    return 'failed'
+  }
+  if (!get().sessions.some((session) => session.id === sessionId)) {
+    await removeBookmark(messageId).catch(db.reportStorageError('remove missing bookmark'))
+    return 'missing'
+  }
+  await ensureSessionLoaded(sessionId)
+  const session = getSession(sessionId)
+  if (!session) {
+    return 'failed'
+  }
+  if (!session.messages.some((message) => message.id === messageId)) {
+    await removeBookmark(messageId).catch(db.reportStorageError('remove missing bookmark'))
+    return 'missing'
+  }
+  const visible = getVisibleMessages(session).some((message) => message.id === messageId)
+  if (!visible && getStreamController(sessionId)) {
+    return 'busy'
+  }
+  if (!visible) {
+    const revealed = revealMessage(session, messageId)
+    if (revealed === session) {
+      return 'failed'
+    }
+    updateSession(sessionId, () => revealed)
+    persist(sessionId)
+  }
+  selectSession(sessionId)
+  useMessageJump.getState().request(sessionId, messageId)
+  return 'opened'
 }
 
 export const renameSession = (id: string, title: string) => {
@@ -571,6 +632,7 @@ const removeSessionData = async (id: string): Promise<boolean> => {
       ),
       activeId: state.activeId === id ? null : state.activeId,
     }))
+    removeBookmarksForSession(id)
     return true
   } catch (error) {
     db.reportStorageError('delete session')(error)
@@ -1139,6 +1201,12 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         Object.entries(state.streaming).filter(([id]) => id !== sessionId)
       ),
     }))
+    if (useBookmarks.getState().byMessageId[reply.id]) {
+      const excerpt = replyToBookmarkExcerpt(reply)
+      if (excerpt) {
+        void refreshBookmarkExcerpt(reply.id, excerpt)
+      }
+    }
     persist(sessionId)
     scheduleMemoryExtraction(sessionId)
   }

@@ -1,10 +1,16 @@
 import clsx from 'clsx'
 import { useEffect, useId, useMemo, useState } from 'react'
 import { useTranslate } from '../../i18n/index.js'
-import { IconPanelLeftOutline16, IconSettingsOutline16, NewChatIcon } from '../base/icons.js'
+import {
+  IconBookmarkOutline16,
+  IconPanelLeftOutline16,
+  IconSettingsOutline16,
+  NewChatIcon,
+} from '../base/icons.js'
 import { setSiderCollapsed } from '../../services/settings.js'
 import { groupSessions } from '../../services/chat/sessionGroups.js'
-import { newChat, removeSession, useChatStore } from '../../services/chat/store.js'
+import { newChat, openBookmark, removeSession, useChatStore } from '../../services/chat/store.js'
+import { useBookmarks } from '../../services/bookmarks.js'
 import type { SessionSummary } from '../../services/chat/types.js'
 import { Button } from '../base/Button.js'
 import { IconButton } from '../base/IconButton.js'
@@ -14,28 +20,39 @@ import { openSettings } from '../settings/settingsDialogState.js'
 import { UpdateTag } from '../update/UpdateTag.js'
 import { closeMobileSider, useMobileSider } from './mobileSiderState.js'
 import { SessionItem } from './SessionItem.js'
+import { BookmarkItem, type BookmarkListItem } from './BookmarkItem.js'
 import styles from './Sider.module.css'
 
-type SessionTab = 'all' | 'favorites'
+type SessionTab = 'all' | 'favorites' | 'bookmarks'
 
 /** 展开的侧边栏：名称与收起按钮、开启新对话、全部/收藏夹切换、按时间分组的会话列表、底部设置；移动端放在抽屉里，收起按钮关闭抽屉 */
 export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
   const t = useTranslate()
   const sessions = useChatStore((state) => state.sessions)
   const activeId = useChatStore((state) => state.activeId)
+  const bookmarks = useBookmarks((state) => state.items)
   const [now, setNow] = useState(Date.now)
   const [tab, setTab] = useState<SessionTab>('all')
   const tabId = useId()
   const panelId = `${tabId}-panel`
   const groups = useMemo(
     () =>
-      groupSessions(
-        tab === 'favorites' ? sessions.filter((session) => session.favorite) : sessions,
-        now,
-        t
-      ),
+      tab === 'bookmarks'
+        ? []
+        : groupSessions(
+            tab === 'favorites' ? sessions.filter((session) => session.favorite) : sessions,
+            now,
+            t
+          ),
     [sessions, now, tab, t]
   )
+  const bookmarkItems = useMemo<BookmarkListItem[]>(() => {
+    const byId = new Map(sessions.map((session) => [session.id, session]))
+    return bookmarks.flatMap((bookmark) => {
+      const session = byId.get(bookmark.sessionId)
+      return session ? [{ ...bookmark, sourceTitle: session.title || t('untitledChat') }] : []
+    })
+  }, [bookmarks, sessions, t])
   const [deleting, setDeleting] = useState<SessionSummary | null>(null)
   const [deletePending, setDeletePending] = useState(false)
 
@@ -62,6 +79,15 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
       window.removeEventListener('focus', refresh)
     }
   }, [])
+
+  // 书签使用相对时间，标签页激活时每分钟刷新一次。
+  useEffect(() => {
+    if (tab !== 'bookmarks') {
+      return
+    }
+    const timer = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(timer)
+  }, [tab])
 
   return (
     <div className={clsx(styles.sider, mobile && styles.mobile)}>
@@ -111,15 +137,68 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
         >
           {t('siderTabFavorites')}
         </button>
+        <button
+          type="button"
+          role="tab"
+          id={`${tabId}-bookmarks`}
+          aria-selected={tab === 'bookmarks'}
+          aria-controls={panelId}
+          className={clsx(styles.tab, tab === 'bookmarks' && styles.tabActive)}
+          onClick={() => setTab('bookmarks')}
+        >
+          {t('siderTabBookmarks')}
+        </button>
       </div>
       <div className={styles.listWrap}>
         <div
           className={styles.list}
           role="tabpanel"
           id={panelId}
-          aria-labelledby={tab === 'all' ? `${tabId}-all` : `${tabId}-favorites`}
+          aria-labelledby={
+            tab === 'all'
+              ? `${tabId}-all`
+              : tab === 'favorites'
+                ? `${tabId}-favorites`
+                : `${tabId}-bookmarks`
+          }
         >
-          {tab === 'favorites' && groups.length === 0 ? (
+          {tab === 'bookmarks' ? (
+            bookmarkItems.length === 0 ? (
+              <div className={styles.bookmarkEmpty}>
+                <div className={styles.bookmarkEmptyIcon}>
+                  <IconBookmarkOutline16 />
+                </div>
+                <div className={styles.bookmarkEmptyTitle}>{t('siderBookmarksEmpty')}</div>
+                <div className={styles.bookmarkEmptyHint}>
+                  {t('siderBookmarksEmptyHintLine1')}
+                  <br />
+                  {t('siderBookmarksEmptyHintLine2')}
+                </div>
+              </div>
+            ) : (
+              bookmarkItems.map((bookmark) => (
+                <BookmarkItem
+                  key={bookmark.messageId}
+                  bookmark={bookmark}
+                  now={now}
+                  onOpen={() => {
+                    closeMobileSider()
+                    void openBookmark(bookmark.sessionId, bookmark.messageId)
+                      .then((result) => {
+                        if (result === 'missing') {
+                          showToast({ key: 'bookmarkMissing' })
+                        } else if (result === 'busy') {
+                          showToast({ key: 'bookmarkJumpBusy' })
+                        } else if (result === 'failed') {
+                          showToast({ key: 'bookmarkJumpFailed', type: 'error' })
+                        }
+                      })
+                      .catch(() => showToast({ key: 'bookmarkJumpFailed', type: 'error' }))
+                  }}
+                />
+              ))
+            )
+          ) : tab === 'favorites' && groups.length === 0 ? (
             <div className={styles.empty}>{t('siderFavoritesEmpty')}</div>
           ) : (
             groups.map((group) => (

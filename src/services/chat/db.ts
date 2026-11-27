@@ -1,8 +1,8 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import { toSessionSummary, type Session, type SessionSummary } from './types.js'
+import { toSessionSummary, type Bookmark, type Session, type SessionSummary } from './types.js'
 
 /** IndexedDB 存储结构版本；新增或调整存储、索引时递增。 */
-const DB_VERSION = 11
+const DB_VERSION = 12
 
 /** 文件原件按附件的本地 id 存储，所有引用同一 id 的消息共用一份；用于缩略图、打开查看，以及没有 serverId 时补传。 */
 export type StoredFile = {
@@ -29,6 +29,12 @@ interface ChatDB extends DBSchema {
    */
   sessionsStaging: { key: string; value: Session }
   filesStaging: { key: string; value: StoredFile }
+  /** 回答级书签；按来源会话建立索引，删除会话时级联清理。 */
+  bookmarks: {
+    key: string
+    value: Bookmark
+    indexes: { sessionId: string }
+  }
 }
 
 let dbPromise: Promise<IDBPDatabase<ChatDB>> | null = null
@@ -68,6 +74,12 @@ const getDB = () =>
       if (!summaries.indexNames.contains('fileIds')) {
         summaries.createIndex('fileIds', 'fileIds', { multiEntry: true })
       }
+      const bookmarks = db.objectStoreNames.contains('bookmarks')
+        ? tx.objectStore('bookmarks')
+        : db.createObjectStore('bookmarks', { keyPath: 'messageId' })
+      if (!bookmarks.indexNames.contains('sessionId')) {
+        bookmarks.createIndex('sessionId', 'sessionId')
+      }
     },
   }).catch((error: unknown) => {
     // 打开失败后允许界面重试，避免一直复用已拒绝的 Promise。
@@ -80,6 +92,39 @@ export const loadSessionSummaries = async (): Promise<SessionSummary[]> =>
 
 export const loadSession = async (id: string): Promise<Session | undefined> =>
   (await getDB()).get('sessions', id)
+
+export const loadBookmarks = async (): Promise<Bookmark[]> =>
+  (await (await getDB()).getAll('bookmarks')).sort((a, b) => b.createdAt - a.createdAt)
+
+export const saveBookmark = async (bookmark: Bookmark): Promise<void> => {
+  await (await getDB()).put('bookmarks', bookmark)
+}
+
+export const deleteBookmark = async (messageId: string): Promise<void> => {
+  await (await getDB()).delete('bookmarks', messageId)
+}
+
+/** 删除某会话的全部书签；删除会话事务内复用同一游标逻辑。 */
+export const deleteBookmarksForSession = async (sessionId: string): Promise<void> => {
+  const tx = (await getDB()).transaction('bookmarks', 'readwrite')
+  await Promise.all([
+    (async () => {
+      const index = tx.store.index('sessionId')
+      for (
+        let cursor = await index.openCursor(IDBKeyRange.only(sessionId));
+        cursor;
+        cursor = await cursor.continue()
+      ) {
+        await cursor.delete()
+      }
+    })(),
+    tx.done,
+  ])
+}
+
+export const clearBookmarks = async (): Promise<void> => {
+  await (await getDB()).clear('bookmarks')
+}
 
 export const saveSession = async (session: Session, files: StoredFile[] = []): Promise<void> => {
   const summary = storedSummary(session)
@@ -153,7 +198,10 @@ export const setSessionFavorite = async (id: string, favorite: boolean): Promise
 
 /** 删除会话，仅清理已无会话引用的本地原件；远端文件不删。 */
 export const deleteSession = async (sessionId: string): Promise<void> => {
-  const tx = (await getDB()).transaction(['sessions', 'sessionSummaries', 'files'], 'readwrite')
+  const tx = (await getDB()).transaction(
+    ['sessions', 'sessionSummaries', 'files', 'bookmarks'],
+    'readwrite'
+  )
   await Promise.all([
     (async () => {
       try {
@@ -161,6 +209,16 @@ export const deleteSession = async (sessionId: string): Promise<void> => {
         const summary = await summaries.get(sessionId)
         await tx.objectStore('sessions').delete(sessionId)
         await summaries.delete(sessionId)
+        for (
+          let cursor = await tx
+            .objectStore('bookmarks')
+            .index('sessionId')
+            .openCursor(IDBKeyRange.only(sessionId));
+          cursor;
+          cursor = await cursor.continue()
+        ) {
+          await cursor.delete()
+        }
         for (const id of summary?.fileIds ?? []) {
           if ((await summaries.index('fileIds').count(id)) === 0) {
             await tx.objectStore('files').delete(id)
@@ -238,7 +296,7 @@ export const updateStagingFileTypes = async (types: ReadonlyMap<string, string>)
 export const commitStaging = async (): Promise<SessionSummary[]> => {
   const summaries: SessionSummary[] = []
   const tx = (await getDB()).transaction(
-    ['sessions', 'sessionSummaries', 'files', 'sessionsStaging', 'filesStaging'],
+    ['sessions', 'sessionSummaries', 'files', 'sessionsStaging', 'filesStaging', 'bookmarks'],
     'readwrite'
   )
   const move = async (from: 'sessionsStaging' | 'filesStaging', to: 'sessions' | 'files') => {
@@ -247,6 +305,7 @@ export const commitStaging = async (): Promise<SessionSummary[]> => {
       await target.clear()
       if (to === 'sessions') {
         await tx.objectStore('sessionSummaries').clear()
+        await tx.objectStore('bookmarks').clear()
       }
       for (
         let cursor = await tx.objectStore(from).openCursor();
