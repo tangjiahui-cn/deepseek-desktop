@@ -123,6 +123,34 @@ export const renameSession = async (id: string, title: string): Promise<void> =>
   ])
 }
 
+/** 未打开的会话也可切换收藏，在同一个事务里更新会话详情与列表摘要。 */
+export const setSessionFavorite = async (id: string, favorite: boolean): Promise<void> => {
+  const tx = (await getDB()).transaction(['sessions', 'sessionSummaries'], 'readwrite')
+  await Promise.all([
+    (async () => {
+      try {
+        const sessions = tx.objectStore('sessions')
+        const session = await sessions.get(id)
+        if (session) {
+          session.favorite = favorite
+          await sessions.put(session)
+          await tx.objectStore('sessionSummaries').put(storedSummary(session))
+          return
+        }
+        const summaries = tx.objectStore('sessionSummaries')
+        const summary = await summaries.get(id)
+        if (summary) {
+          await summaries.put({ ...summary, favorite })
+        }
+      } catch (error) {
+        abortTransaction(tx)
+        throw error
+      }
+    })(),
+    tx.done,
+  ])
+}
+
 /** 删除会话，仅清理已无会话引用的本地原件；远端文件不删。 */
 export const deleteSession = async (sessionId: string): Promise<void> => {
   const tx = (await getDB()).transaction(['sessions', 'sessionSummaries', 'files'], 'readwrite')

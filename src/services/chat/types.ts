@@ -110,6 +110,8 @@ export type Session = {
   title: string
   createdAt: number
   updatedAt: number
+  /** 本机收藏标记；缺省视为未收藏，旧数据不需要迁移。 */
+  favorite?: boolean
   /** 包含所有分支的消息，按创建顺序存储。 */
   messages: Message[]
   /** undefined 表示线性消息列表；null 表示空会话。 */
@@ -117,12 +119,17 @@ export type Session = {
 }
 
 /** 会话列表元数据；消息只在打开会话时加载。 */
-export type SessionSummary = Pick<Session, 'id' | 'title' | 'createdAt' | 'updatedAt'>
+export type SessionSummary = Pick<Session, 'id' | 'title' | 'createdAt' | 'updatedAt'> & {
+  favorite: boolean
+}
 
-/** 显式提取字段，避免将完整会话的消息带进列表。 */
-export const toSessionSummary = (session: SessionSummary): SessionSummary => ({
+/** 显式提取字段，避免将完整会话的消息带进列表；缺省收藏标记归一化为未收藏。 */
+export const toSessionSummary = (
+  session: Pick<Session, 'id' | 'title' | 'createdAt' | 'updatedAt' | 'favorite'>
+): SessionSummary => ({
   id: session.id,
   title: session.title,
   createdAt: session.createdAt,
   updatedAt: session.updatedAt,
+  favorite: session.favorite === true,
 })

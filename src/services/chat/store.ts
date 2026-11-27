@@ -110,8 +110,16 @@ const getStreamController = (id: string) => {
   return Object.hasOwn(streams, id) ? streams[id] : undefined
 }
 
-const sameSummary = (a: SessionSummary, b: SessionSummary) =>
-  a.title === b.title && a.createdAt === b.createdAt && a.updatedAt === b.updatedAt
+/** 摘要与详情共有的元数据；详情上的 favorite 可能是旧数据缺省的 undefined。 */
+type SummaryMeta = Pick<SessionSummary, 'title' | 'createdAt' | 'updatedAt'> & {
+  favorite?: boolean
+}
+
+const sameSummary = (a: SummaryMeta, b: SummaryMeta) =>
+  a.title === b.title &&
+  a.createdAt === b.createdAt &&
+  a.updatedAt === b.updatedAt &&
+  (a.favorite === true) === (b.favorite === true)
 
 const sessionAccess = new Map<string, number>()
 const unsavedSessions = new Set<string>()
@@ -494,6 +502,27 @@ export const renameSession = (id: string, title: string) => {
     }))
     void db.renameSession(id, title).catch(db.reportStorageError('rename session'))
   }
+}
+
+/**
+ * 切换会话收藏。收藏只改元数据：不改 updatedAt，也不改变列表顺序。
+ * 详情已载入时走会话缓存与统一保存流程；否则直接更新摘要并写库。
+ */
+export const setSessionFavorite = (id: string, favorite: boolean) => {
+  if (get().importingHistory || deletingSessions.has(id)) {
+    return
+  }
+  if (getSession(id)) {
+    updateSession(id, (session) => ({ ...session, favorite }))
+    persist(id)
+    return
+  }
+  set((state) => ({
+    sessions: state.sessions.map((session) =>
+      session.id === id ? { ...session, favorite } : session
+    ),
+  }))
+  void db.setSessionFavorite(id, favorite).catch(db.reportStorageError('favorite session'))
 }
 
 /**

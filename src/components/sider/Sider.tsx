@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import { IconPanelLeftOutline16, IconSettingsOutline16, NewChatIcon } from '../base/icons.js'
 import { setSiderCollapsed } from '../../services/settings.js'
@@ -16,13 +16,26 @@ import { closeMobileSider, useMobileSider } from './mobileSiderState.js'
 import { SessionItem } from './SessionItem.js'
 import styles from './Sider.module.css'
 
-/** 展开的侧边栏：名称与收起按钮、开启新对话、按时间分组的会话列表、底部设置；移动端放在抽屉里，收起按钮关闭抽屉 */
+type SessionTab = 'all' | 'favorites'
+
+/** 展开的侧边栏：名称与收起按钮、开启新对话、全部/收藏夹切换、按时间分组的会话列表、底部设置；移动端放在抽屉里，收起按钮关闭抽屉 */
 export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
   const t = useTranslate()
   const sessions = useChatStore((state) => state.sessions)
   const activeId = useChatStore((state) => state.activeId)
   const [now, setNow] = useState(Date.now)
-  const groups = useMemo(() => groupSessions(sessions, now, t), [sessions, now, t])
+  const [tab, setTab] = useState<SessionTab>('all')
+  const tabId = useId()
+  const panelId = `${tabId}-panel`
+  const groups = useMemo(
+    () =>
+      groupSessions(
+        tab === 'favorites' ? sessions.filter((session) => session.favorite) : sessions,
+        now,
+        t
+      ),
+    [sessions, now, tab, t]
+  )
   const [deleting, setDeleting] = useState<SessionSummary | null>(null)
   const [deletePending, setDeletePending] = useState(false)
 
@@ -75,21 +88,54 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
         </span>
         {t('newChat')}
       </button>
+      <div className={styles.tabs} role="tablist">
+        <button
+          type="button"
+          role="tab"
+          id={`${tabId}-all`}
+          aria-selected={tab === 'all'}
+          aria-controls={panelId}
+          className={clsx(styles.tab, tab === 'all' && styles.tabActive)}
+          onClick={() => setTab('all')}
+        >
+          {t('siderTabAll')}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id={`${tabId}-favorites`}
+          aria-selected={tab === 'favorites'}
+          aria-controls={panelId}
+          className={clsx(styles.tab, tab === 'favorites' && styles.tabActive)}
+          onClick={() => setTab('favorites')}
+        >
+          {t('siderTabFavorites')}
+        </button>
+      </div>
       <div className={styles.listWrap}>
-        <div className={styles.list}>
-          {groups.map((group) => (
-            <div key={group.key} className={styles.section}>
-              <div className={styles.sectionHeader}>{group.label}</div>
-              {group.sessions.map((session) => (
-                <SessionItem
-                  key={session.id}
-                  session={session}
-                  active={session.id === activeId}
-                  onDelete={() => setDeleting(session)}
-                />
-              ))}
-            </div>
-          ))}
+        <div
+          className={styles.list}
+          role="tabpanel"
+          id={panelId}
+          aria-labelledby={tab === 'all' ? `${tabId}-all` : `${tabId}-favorites`}
+        >
+          {tab === 'favorites' && groups.length === 0 ? (
+            <div className={styles.empty}>{t('siderFavoritesEmpty')}</div>
+          ) : (
+            groups.map((group) => (
+              <div key={group.key} className={styles.section}>
+                <div className={styles.sectionHeader}>{group.label}</div>
+                {group.sessions.map((session) => (
+                  <SessionItem
+                    key={session.id}
+                    session={session}
+                    active={session.id === activeId}
+                    onDelete={() => setDeleting(session)}
+                  />
+                ))}
+              </div>
+            ))
+          )}
         </div>
       </div>
       <UpdateTag />
